@@ -1,5 +1,5 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'app_info.dart';
+
 import 'zo_app_blocker_method_channel.dart';
 
 abstract class ZoAppBlockerPlatform extends PlatformInterface {
@@ -49,6 +49,8 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
   }
 
   Future<void> setBlockScreenConfig(Map<String, String> config) {
-    throw UnimplementedError('setBlockScreenConfig() has not been implemented.');
+    throw UnimplementedError(
+      'setBlockScreenConfig() has not been implemented.',
+    );
   }
 }

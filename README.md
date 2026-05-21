@@ -1,104 +1,101 @@
-# Zo App Blocker
+# zo_app_blocker
 
-A powerful Flutter plugin for blocking applications on both Android and iOS. This plugin uses native APIs (`AccessibilityService` and `ForegroundService` on Android, `FamilyControls` and `ManagedSettings` on iOS) to reliably block user-selected applications, even when your Flutter app is completely killed.
+A Flutter plugin that lets you block apps on Android.
 
-## Features
+It uses Android's `AccessibilityService` and `ForegroundService` under the hood. This means the app blocking actually works consistently, even if the user swipes your Flutter app away from the recent apps list.
 
-*   **Cross-Platform App Blocking:** Prevent users from opening specific apps or specific app categories.
-*   **Android Background Persistence:** Uses a robust Foreground Service and Accessibility Service to guarantee that app blocking stays active even if the device reboots or your Flutter app is swiped away from recents.
-*   **iOS Screen Time Integration:** Native iOS 16.0+ implementation using Apple's official Screen Time API (`FamilyControls`).
-*   **Customizable Block Screen (Android):** Design the full-screen overlay that appears when a user tries to open a blocked app directly from your Dart code.
+*Note: Right now, this package only supports Android.*
 
----
+## What it does
 
-## 🚀 Setup & Installation
+* **Block specific apps:** Stop users from opening apps they shouldn't.
+* **Stays alive:** Thanks to the Foreground Service, the blocking keeps working in the background.
+* **Custom UI:** You can customize the full-screen overlay that pops up when a user tries to open a blocked app.
+* **Custom Notification:** Set your own title and description for the persistent background notification.
 
-### Android Setup
+## Setup & Permissions (Android)
 
-1.  **Permissions:** The plugin automatically adds the required `QUERY_ALL_PACKAGES`, `FOREGROUND_SERVICE`, `POST_NOTIFICATIONS`, and `BIND_ACCESSIBILITY_SERVICE` permissions. However, starting from Android 13 (API 33), you **must** request the notification permission at runtime so the Foreground Service notification can be displayed. You can use a package like `permission_handler` to request this before blocking apps:
-    ```dart
-    import 'package:permission_handler/permission_handler.dart';
-    
-    Future<void> requestPermissions() async {
-      if (await Permission.notification.isDenied) {
-        await Permission.notification.request();
-      }
-    }
-    ```
+To get this working, there are a few permissions you need to handle on Android.
 
-2.  **Accessibility Service:** For the plugin to work, the user must explicitly enable your app in their Android Accessibility Settings. The plugin provides a method to check and request this:
-    ```dart
-    final status = await ZoAppBlocker.instance.checkPermission();
-    if (status == 'denied') {
-      await ZoAppBlocker.instance.requestPermission(); // Opens Android settings
-    }
-    ```
+### 1. AndroidManifest.xml
 
-3.  **Foreground Service Notification:** Once `blockApps()` is called, a Foreground Service will automatically start and display a persistent notification. This guarantees that Android battery optimization does not kill the accessibility service when the user closes your app.
+The plugin automatically adds most of what it needs to your manifest, but here's what it uses in case you're curious:
 
-### iOS Setup (Requires iOS 16.0+)
+* `QUERY_ALL_PACKAGES` (to get the installed apps)
+* `FOREGROUND_SERVICE` and `POST_NOTIFICATIONS` (to run in the background)
+* `BIND_ACCESSIBILITY_SERVICE` (to detect when apps are launched)
 
-1.  **Capabilities:** Open your project in Xcode. Go to your target's **Signing & Capabilities** tab and add the **Family Controls** capability.
-2.  **Info.plist:** Add a reason for using Family Controls to your `ios/Runner/Info.plist`:
-    ```xml
-    <key>NSFamilyControlsUsageDescription</key>
-    <string>We need Screen Time access to block distracting apps.</string>
-    ```
-3.  **Authorization:** You must request Family Controls authorization before using the plugin.
-    ```dart
-    final status = await ZoAppBlocker.instance.checkPermission();
-    if (status == 'denied') {
-      await ZoAppBlocker.instance.requestPermission();
-    }
-    ```
+### 2. Notification Permission (Android 13+)
 
----
+If you're targeting Android 13 or higher, you have to ask the user for permission to show notifications before you can start the background service. You can use the `permission_handler` package for this:
 
-## 🛠 Usage
+```dart
+import 'package:permission_handler/permission_handler.dart';
 
-### 1. Customizing the Block Screen (Android Only)
+Future<void> requestPermissions() async {
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
+}
+```
 
-Before blocking apps, customize the instant native overlay that appears over blocked apps:
+### 3. Accessibility Permission
+
+For the plugin to actually detect when a blocked app is opened, the user has to go into their Android settings and enable Accessibility for your app. You can check the status and prompt them to open settings like this:
+
+```dart
+final status = await ZoAppBlocker.instance.checkPermission();
+if (status == 'denied') {
+  await ZoAppBlocker.instance.requestPermission(); // Takes them to Android settings
+}
+```
+
+## How to use it
+
+### 1. Style your block screen
+
+Before you block anything, you probably want to customize the screen that shows up. You can also customize the background notification here.
 
 ```dart
 await ZoAppBlocker.instance.setBlockScreenConfig(
-  backgroundColor: '#FF0000',
+  backgroundColor: '#F44336', // Hex color strings
   title: 'Stop Right There!',
   titleColor: '#FFFFFF',
   description: 'You blocked this app. Get back to work!',
   descriptionColor: '#DDDDDD',
+  notificationTitle: 'Focus Mode Active', 
+  notificationDescription: 'Monitoring your apps in the background.'
 );
 ```
 
-### 2. Selecting Apps to Block
+### 2. Get a list of installed apps
 
-The plugin provides a built-in UI for selecting apps:
-*   **Android:** Returns a list of installed apps.
-*   **iOS:** Displays the native SwiftUI `FamilyActivityPicker`.
+If you need to show the user a list of apps they can block, you can fetch all installed apps:
 
 ```dart
-final selectedApps = await ZoAppBlocker.instance.getApps();
-// Returns a list of maps, e.g. [{"packageName": "com.facebook.katana", "appName": "Facebook"}]
+final installedApps = await ZoAppBlocker.instance.getApps();
+// Returns something like: [{"packageName": "com.facebook.katana", "appName": "Facebook"}, ...]
 ```
 
-### 3. Blocking Apps
+### 3. Start blocking
 
-Pass the `packageName` (or the iOS opaque tokens returned from `getApps()`) to the blocker:
+Just pass a list of package names to the plugin. Once you call this, the Foreground Service starts up automatically.
 
 ```dart
-final identifiersToBlock = selectedApps.map((app) => app['packageName']!).toList();
-await ZoAppBlocker.instance.blockApps(identifiersToBlock);
+await ZoAppBlocker.instance.blockApps([
+   
+  'com.instagram.android'
+]);
 ```
 
-### 4. Unblocking Apps
+### 4. Unblock apps
+
+You can remove specific apps from the blocklist, or just unblock everything (which also stops the background service).
 
 ```dart
-await ZoAppBlocker.instance.unblockApps(identifiersToBlock);
+// Unblock specific ones
+await ZoAppBlocker.instance.unblockApps(['com.facebook.katana']);
 
-// Or unblock everything:
+// Unblock everything and stop the service
 await ZoAppBlocker.instance.unblockAll();
 ```
-
-## Note on App Kills & Background Behavior
-*   **Android:** Thanks to the Foreground Service, if the user swipes away your Flutter app, the block configuration remains active, and the custom native overlay will appear instantly.
-*   **iOS:** Apple's `ManagedSettingsStore` natively persists the block selection across reboots and app kills.

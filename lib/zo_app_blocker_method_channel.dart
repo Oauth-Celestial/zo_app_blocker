@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'app_info.dart';
+
 import 'zo_app_blocker_platform_interface.dart';
 
 class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
@@ -27,19 +27,25 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
 
   @override
   Future<List<Map<String, dynamic>>> getBlockedApps() async {
-    final List<dynamic>? result = await methodChannel.invokeMethod('getBlockedApps');
+    final List<dynamic>? result = await methodChannel.invokeMethod(
+      'getBlockedApps',
+    );
     if (result == null) return [];
     return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   @override
   Future<void> blockApps(List<String> identifiers) async {
-    await methodChannel.invokeMethod<void>('blockApps', {'identifiers': identifiers});
+    await methodChannel.invokeMethod<void>('blockApps', {
+      'identifiers': identifiers,
+    });
   }
 
   @override
   Future<void> unblockApps(List<String> identifiers) async {
-    await methodChannel.invokeMethod<void>('unblockApps', {'identifiers': identifiers});
+    await methodChannel.invokeMethod<void>('unblockApps', {
+      'identifiers': identifiers,
+    });
   }
 
   @override

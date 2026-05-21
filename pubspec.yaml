@@ -5,7 +5,7 @@ homepage:
 
 environment:
   sdk: ^3.11.5
-  flutter: '>=3.3.0'
+  flutter: ">=3.3.0"
 
 dependencies:
   flutter:
@@ -37,8 +37,8 @@ flutter:
       android:
         package: com.example.zo_app_blocker
         pluginClass: ZoAppBlockerPlugin
-      ios:
-        pluginClass: ZoAppBlockerPlugin
+      # ios:
+      #   pluginClass: ZoAppBlockerPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
