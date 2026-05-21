@@ -58,13 +58,11 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         
         // System UI and launcher checks
         if (packageName == "com.android.systemui" || isLauncherPackage(packageName)) {
-            removeOverlay()
             lastPackage = packageName
             return
         }
         
         if (packageName == this.packageName) {
-            removeOverlay()
             lastPackage = packageName
             return
         }
@@ -138,7 +136,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private fun createOverlayView(packageName: String): View {
         val config = prefsManager.getBlockScreenConfig()
         
-        val bgColor = parseColorSafe(config["backgroundColor"], "#FF0000")
+        val bgColor = parseColorSafe(config["backgroundColor"], "#F44336")
         val tColor = parseColorSafe(config["titleColor"], "#FFFFFF")
         val dColor = parseColorSafe(config["descriptionColor"], "#EEEEEE")
         
@@ -146,15 +144,16 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setBackgroundColor(bgColor)
-            setPadding(64, 64, 64, 64)
+            setPadding(80, 80, 80, 80)
         }
 
         val titleView = TextView(this).apply {
             text = config["title"]
             setTextColor(tColor)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
+            setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 32)
+            setPadding(0, 0, 0, 24)
         }
 
         val descView = TextView(this).apply {
@@ -162,10 +161,19 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             setTextColor(dColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             gravity = Gravity.CENTER
+            setLineSpacing(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4f, resources.displayMetrics), 1.0f)
+            setPadding(0, 0, 0, 64)
         }
 
         val btn = android.widget.Button(this).apply {
             text = "Exit"
+            setTextColor(bgColor)
+            setBackgroundColor(tColor)
+            isAllCaps = false
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(64, 32, 64, 32)
+            elevation = 8f
             setOnClickListener {
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 removeOverlay()
@@ -173,9 +181,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 64
-            }
+            )
             layoutParams = lp
         }
 
@@ -191,10 +197,20 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     }
 
     private fun parseColorSafe(colorStr: String?, defaultColor: String): Int {
+        if (colorStr.isNullOrEmpty()) return Color.parseColor(defaultColor)
         return try {
-            Color.parseColor(colorStr ?: defaultColor)
+            Color.parseColor(colorStr)
         } catch (e: Exception) {
-            Color.parseColor(defaultColor)
+            try {
+                // Handle cases where the color is passed as an integer string (e.g. "4278190080" or "0xFF...")
+                if (colorStr.startsWith("0x", ignoreCase = true)) {
+                    colorStr.substring(2).toLong(16).toInt()
+                } else {
+                    colorStr.toLong().toInt()
+                }
+            } catch (e2: Exception) {
+                Color.parseColor(defaultColor)
+            }
         }
     }
 

@@ -36,7 +36,9 @@ class PreferencesManager(context: Context) {
             "title" to (prefs.getString("config_title", null) ?: "App Blocked"),
             "titleColor" to (prefs.getString("config_titleColor", null) ?: "#FFFFFF"),
             "description" to (prefs.getString("config_description", null) ?: "This app is blocked."),
-            "descriptionColor" to (prefs.getString("config_descriptionColor", null) ?: "#EEEEEE")
+            "descriptionColor" to (prefs.getString("config_descriptionColor", null) ?: "#EEEEEE"),
+            "notificationTitle" to (prefs.getString("config_notificationTitle", null) ?: "Zo App Blocker Active"),
+            "notificationDescription" to (prefs.getString("config_notificationDescription", null) ?: "Monitoring and blocking restricted apps.")
         )
     }
 }

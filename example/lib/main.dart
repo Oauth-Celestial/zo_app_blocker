@@ -12,9 +12,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: HomeScreen(),
-    );
+    return const MaterialApp(home: HomeScreen());
   }
 }
 
@@ -36,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkPermission();
     _loadBlockedApps();
     _zoAppBlockerPlugin.setBlockScreenConfig(
-      backgroundColor: '#FF0000',
+      backgroundColor: '#000000',
       title: 'Stop Right There!',
       titleColor: '#FFFFFF',
       description: 'You blocked this app. Get back to work!',
@@ -64,7 +62,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!notifStatus.isGranted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notification permission is required for the background service.')),
+            const SnackBar(
+              content: Text(
+                'Notification permission is required for the background service.',
+              ),
+            ),
           );
         }
       }
@@ -76,13 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _selectAndBlockApps() async {
     try {
       final apps = await _zoAppBlockerPlugin.getApps();
-      
+
       if (Platform.isIOS) {
         // iOS handles the picker UI and blocking internally
         _loadBlockedApps();
         return;
       }
-      
+
       if (apps.isEmpty) return;
       if (!mounted) return;
 
@@ -93,7 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text('Select an app to block', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'Select an app to block',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
               Expanded(
                 child: ListView.builder(
@@ -104,11 +109,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: Text(app['appName'] ?? ''),
                       subtitle: Text(app['packageName'] ?? ''),
                       onTap: () async {
-                        await _zoAppBlockerPlugin.blockApps([app['packageName']]);
+                        await _zoAppBlockerPlugin.blockApps([
+                          app['packageName'],
+                        ]);
                         if (mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Blocked ${app['appName']}')),
+                            SnackBar(
+                              content: Text('Blocked ${app['appName']}'),
+                            ),
                           );
                         }
                         _loadBlockedApps();
@@ -119,13 +128,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           );
-        }
+        },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error selecting apps: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error selecting apps: $e')));
       }
     }
   }
@@ -133,15 +142,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Zo App Blocker Example'),
-      ),
+      appBar: AppBar(title: const Text('Zo App Blocker Example')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Permission Status: $_permissionStatus', style: const TextStyle(fontSize: 18)),
+            Text(
+              'Permission Status: $_permissionStatus',
+              style: const TextStyle(fontSize: 18),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _requestPermissions,
@@ -166,7 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('Unblock All Apps'),
             ),
             const SizedBox(height: 24),
-            const Text('Currently Blocked Apps:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Currently Blocked Apps:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Expanded(
               child: _blockedApps.isEmpty
@@ -183,7 +196,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: const Icon(Icons.delete, color: Colors.grey),
                             onPressed: () async {
                               final packageName = app['packageName'] as String;
-                              await _zoAppBlockerPlugin.unblockApps([packageName]);
+                              await _zoAppBlockerPlugin.unblockApps([
+                                packageName,
+                              ]);
                               _loadBlockedApps();
                             },
                           ),

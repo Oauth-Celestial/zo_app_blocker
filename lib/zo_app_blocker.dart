@@ -45,6 +45,8 @@ class ZoAppBlocker {
     String titleColor = '#000000',
     String description = 'This app is blocked by Zo App Blocker.',
     String descriptionColor = '#555555',
+    String notificationTitle = 'Zo App Blocker Active',
+    String notificationDescription = 'Monitoring and blocking restricted apps.',
   }) {
     return ZoAppBlockerPlatform.instance.setBlockScreenConfig({
       'backgroundColor': backgroundColor,
@@ -52,6 +54,8 @@ class ZoAppBlocker {
       'titleColor': titleColor,
       'description': description,
       'descriptionColor': descriptionColor,
+      'notificationTitle': notificationTitle,
+      'notificationDescription': notificationDescription,
     });
   }
 }
