@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'app_info.dart';
+
 import 'zo_app_blocker_platform_interface.dart';
 
 export 'app_info.dart';
