@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:typed_data';
 import 'package:zo_app_blocker/zo_app_blocker.dart';
 
 void main() {
@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkPermission() async {
-    final status = await _zoAppBlockerPlugin.checkPermission();
+    final status = await _zoAppBlockerPlugin.checkAccessibilityPermission();
     setState(() {
       _permissionStatus = status;
     });
@@ -58,8 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
-      final notifStatus = await Permission.notification.request();
-      if (!notifStatus.isGranted) {
+      await _zoAppBlockerPlugin.requestNotificationPermission();
+      final notifStatus = await _zoAppBlockerPlugin.checkNotificationPermission();
+      if (notifStatus != 'granted') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -71,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     }
-    await _zoAppBlockerPlugin.requestPermission();
+    await _zoAppBlockerPlugin.requestAccessibilityPermission();
     _checkPermission();
   }
 
@@ -106,6 +107,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemBuilder: (context, index) {
                     final app = apps[index];
                     return ListTile(
+                      leading: FutureBuilder<Uint8List?>(
+                        future: _zoAppBlockerPlugin.getAppIcon(app['packageName'] ?? ''),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const SizedBox(width: 40, height: 40, child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)));
+                          }
+                          if (snapshot.hasData && snapshot.data != null) {
+                            return Image.memory(snapshot.data!, width: 40, height: 40);
+                          }
+                          return const Icon(Icons.android, size: 40);
+                        },
+                      ),
                       title: Text(app['appName'] ?? ''),
                       subtitle: Text(app['packageName'] ?? ''),
                       onTap: () async {
@@ -189,7 +202,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final app = _blockedApps[index];
                         return ListTile(
-                          leading: const Icon(Icons.block, color: Colors.red),
+                          leading: FutureBuilder<Uint8List?>(
+                            future: _zoAppBlockerPlugin.getAppIcon(app['packageName'] ?? ''),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const SizedBox(width: 40, height: 40, child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)));
+                              }
+                              if (snapshot.hasData && snapshot.data != null) {
+                                return Image.memory(snapshot.data!, width: 40, height: 40);
+                              }
+                              return const Icon(Icons.block, color: Colors.red, size: 40);
+                            },
+                          ),
                           title: Text(app['appName'] ?? 'Unknown App'),
                           subtitle: Text(app['packageName'] ?? ''),
                           trailing: IconButton(

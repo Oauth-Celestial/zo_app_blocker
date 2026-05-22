@@ -1,40 +1,71 @@
 # zo_app_blocker
 
-A Flutter plugin that lets you block apps on Android.
+[![Pub Version](https://img.shields.io/pub/v/zo_app_blocker?color=blue)](https://pub.dev/packages/zo_app_blocker)
+[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
-It uses Android's `AccessibilityService` and `ForegroundService` under the hood. This means the app blocking actually works consistently, even if the user swipes your Flutter app away from the recent apps list.
+A Flutter plugin to block specific applications on Android.
 
-*Note: Right now, this package only supports Android.*
+Under the hood, it leverages Android's `AccessibilityService` and `ForegroundService`. This ensures that the app blocking mechanism remains persistent and active, even if the user swipes your Flutter app away from their recent apps list.
 
-## What it does
+> **Note:** This package currently supports **Android only**.
 
-* **Block specific apps:** Stop users from opening apps they shouldn't.
-* **Stays alive:** Thanks to the Foreground Service, the blocking keeps working in the background.
-* **Custom UI:** You can customize the full-screen overlay that pops up when a user tries to open a blocked app.
-* **Custom Notification:** Set your own title and description for the persistent background notification.
+---
+
+## Features
+
+* **Targeted Blocking:** Specify exactly which installed applications should be blocked from launching.
+* **Persistent Execution:** Utilizes a Foreground Service to ensure the background blocking process is not killed by the system.
+* **App Discovery:** Easily fetch a list of all installed applications on the device.
+
+## Get Started
+
+Add `zo_app_blocker` to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  zo_app_blocker: ^latest_version
+```
+
+Or install it via the command line:
+
+```bash
+flutter pub add zo_app_blocker
+```
 
 ## Setup & Permissions (Android)
 
-To get this working, there are a few permissions you need to handle on Android.
+To get this plugin working, several Android permissions need to be handled.
 
 ### 1. AndroidManifest.xml
 
-The plugin automatically adds most of what it needs to your manifest, but here's what it uses in case you're curious:
+Ensure you add the following permissions to your app's `android/app/src/main/AndroidManifest.xml` file, directly inside the `<manifest>` tag:
 
-* `QUERY_ALL_PACKAGES` (to get the installed apps)
-* `FOREGROUND_SERVICE` and `POST_NOTIFICATIONS` (to run in the background)
-* `BIND_ACCESSIBILITY_SERVICE` (to detect when apps are launched)
+```xml
+    <!-- Allows querying installed packages -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Required for the background monitoring service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    
+    <!-- Required to show notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+```
 
 ### 2. Notification Permission (Android 13+)
 
-If you're targeting Android 13 or higher, you have to ask the user for permission to show notifications before you can start the background service. You can use the `permission_handler` package for this:
+If you're targeting Android 13 (API level 33) or higher, you must ask the user for permission to show notifications before you can start the background service. You can use the plugin's built-in methods:
 
 ```dart
-import 'package:permission_handler/permission_handler.dart';
+import 'package:zo_app_blocker/zo_app_blocker.dart';
 
-Future<void> requestPermissions() async {
-  if (await Permission.notification.isDenied) {
-    await Permission.notification.request();
+Future<void> handleNotificationPermission() async {
+  final status = await ZoAppBlocker.instance.checkNotificationPermission();
+  if (status != 'granted') {
+    await ZoAppBlocker.instance.requestNotificationPermission();
   }
 }
 ```
@@ -44,19 +75,27 @@ Future<void> requestPermissions() async {
 For the plugin to actually detect when a blocked app is opened, the user has to go into their Android settings and enable Accessibility for your app. You can check the status and prompt them to open settings like this:
 
 ```dart
-final status = await ZoAppBlocker.instance.checkPermission();
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
+final status = await ZoAppBlocker.instance.checkAccessibilityPermission();
 if (status == 'denied') {
-  await ZoAppBlocker.instance.requestPermission(); // Takes them to Android settings
+  await ZoAppBlocker.instance.requestAccessibilityPermission(); // Takes them to Android settings
 }
 ```
 
-## How to use it
+## Usage
 
 ### 1. Style your block screen
 
-Before you block anything, you probably want to customize the screen that shows up. You can also customize the background notification here.
+Before you block anything, you may want to customize the screen that shows up. You can also customize the background notification here.
 
 ```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
 await ZoAppBlocker.instance.setBlockScreenConfig(
   backgroundColor: '#F44336', // Hex color strings
   title: 'Stop Right There!',
@@ -73,8 +112,13 @@ await ZoAppBlocker.instance.setBlockScreenConfig(
 If you need to show the user a list of apps they can block, you can fetch all installed apps:
 
 ```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
 final installedApps = await ZoAppBlocker.instance.getApps();
-// Returns something like: [{"packageName": "com.facebook.katana", "appName": "Facebook"}, ...]
+// Returns a list containing maps, e.g.:
+// [{"packageName": "com.facebook.katana", "appName": "Facebook"}, ...]
 ```
 
 ### 3. Start blocking
@@ -82,9 +126,13 @@ final installedApps = await ZoAppBlocker.instance.getApps();
 Just pass a list of package names to the plugin. Once you call this, the Foreground Service starts up automatically.
 
 ```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
 await ZoAppBlocker.instance.blockApps([
-   
-  'com.instagram.android'
+  'com.instagram.android',
+  'com.facebook.katana',
 ]);
 ```
 
@@ -93,6 +141,10 @@ await ZoAppBlocker.instance.blockApps([
 You can remove specific apps from the blocklist, or just unblock everything (which also stops the background service).
 
 ```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
 // Unblock specific ones
 await ZoAppBlocker.instance.unblockApps(['com.facebook.katana']);
 

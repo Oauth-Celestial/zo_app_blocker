@@ -16,16 +16,28 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String> checkPermission() {
-    throw UnimplementedError('checkPermission() has not been implemented.');
+  Future<String> checkAccessibilityPermission() {
+    throw UnimplementedError('checkAccessibilityPermission() has not been implemented.');
   }
 
-  Future<void> requestPermission() {
-    throw UnimplementedError('requestPermission() has not been implemented.');
+  Future<void> requestAccessibilityPermission() {
+    throw UnimplementedError('requestAccessibilityPermission() has not been implemented.');
+  }
+
+  Future<String> checkNotificationPermission() {
+    throw UnimplementedError('checkNotificationPermission() has not been implemented.');
+  }
+
+  Future<void> requestNotificationPermission() {
+    throw UnimplementedError('requestNotificationPermission() has not been implemented.');
   }
 
   Future<List<Map<String, dynamic>>> getApps() {
     throw UnimplementedError('getApps() has not been implemented.');
+  }
+
+  Future<List<int>?> getAppIcon(String packageName) {
+    throw UnimplementedError('getAppIcon() has not been implemented.');
   }
 
   Future<List<Map<String, dynamic>>> getBlockedApps() {

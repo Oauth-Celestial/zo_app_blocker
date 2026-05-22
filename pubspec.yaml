@@ -1,7 +1,7 @@
 name: zo_app_blocker
-description: "A new Flutter plugin project."
+description: "A Flutter plugin to block specific applications on Android."
 version: 0.0.1
-homepage:
+repository: https://github.com/Oauth-Celestial/zo_app_blocker
 
 environment:
   sdk: ^3.11.5

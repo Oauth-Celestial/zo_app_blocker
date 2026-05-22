@@ -36,6 +36,8 @@ class AppResolver(private val context: Context) {
                     val icon = info.loadIcon(pm)
                     val isSystem = (info.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
 
+                    if (isSystem) return@mapNotNull null
+
                     mapOf(
                         "packageName" to pkg,
                         "appName" to label,
@@ -47,6 +49,17 @@ class AppResolver(private val context: Context) {
                 }
             }
             .sortedBy { (it["appName"] as? String)?.lowercase() }
+    }
+
+    suspend fun getAppIcon(packageName: String): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val pm = context.packageManager
+            val info = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+            val icon = info.loadIcon(pm)
+            drawableToByteArray(icon)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun drawableToByteArray(drawable: Drawable): ByteArray {

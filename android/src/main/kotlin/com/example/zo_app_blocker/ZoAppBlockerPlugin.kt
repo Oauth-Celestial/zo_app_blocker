@@ -41,11 +41,18 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         val prefs = prefsManager ?: return result.error("NO_PREFS", "Preferences not initialized", null)
         when (call.method) {
-            "checkPermission" -> {
-                result.success(permissionManager?.checkPermission() ?: "denied")
+            "checkAccessibilityPermission" -> {
+                result.success(permissionManager?.checkAccessibilityPermission() ?: "denied")
             }
-            "requestPermission" -> {
-                activity?.let { permissionManager?.requestPermission(it) }
+            "requestAccessibilityPermission" -> {
+                activity?.let { permissionManager?.requestAccessibilityPermission(it) }
+                result.success(null)
+            }
+            "checkNotificationPermission" -> {
+                result.success(permissionManager?.checkNotificationPermission() ?: "granted")
+            }
+            "requestNotificationPermission" -> {
+                activity?.let { permissionManager?.requestNotificationPermission(it) }
                 result.success(null)
             }
             "getApps" -> {
@@ -63,6 +70,13 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                         blockedPackages.contains(packageName)
                     }
                     result.success(blockedApps)
+                }
+            }
+            "getAppIcon" -> {
+                val packageName = call.argument<String>("packageName") ?: return result.error("INVALID_ARG", "Package name missing", null)
+                CoroutineScope(Dispatchers.Main).launch {
+                    val iconBytes = appResolver?.getAppIcon(packageName)
+                    result.success(iconBytes)
                 }
             }
             "blockApps" -> {

@@ -8,14 +8,25 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
   final methodChannel = const MethodChannel('zo_app_blocker');
 
   @override
-  Future<String> checkPermission() async {
-    final result = await methodChannel.invokeMethod<String>('checkPermission');
+  Future<String> checkAccessibilityPermission() async {
+    final result = await methodChannel.invokeMethod<String>('checkAccessibilityPermission');
     return result ?? 'denied';
   }
 
   @override
-  Future<void> requestPermission() async {
-    await methodChannel.invokeMethod<void>('requestPermission');
+  Future<void> requestAccessibilityPermission() async {
+    await methodChannel.invokeMethod<void>('requestAccessibilityPermission');
+  }
+
+  @override
+  Future<String> checkNotificationPermission() async {
+    final result = await methodChannel.invokeMethod<String>('checkNotificationPermission');
+    return result ?? 'denied';
+  }
+
+  @override
+  Future<void> requestNotificationPermission() async {
+    await methodChannel.invokeMethod<void>('requestNotificationPermission');
   }
 
   @override
@@ -23,6 +34,19 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
     final List<dynamic>? result = await methodChannel.invokeMethod('getApps');
     if (result == null) return [];
     return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<List<int>?> getAppIcon(String packageName) async {
+    try {
+      final result = await methodChannel.invokeMethod('getAppIcon', {
+        'packageName': packageName,
+      });
+      if (result == null) return null;
+      return (result as List<dynamic>).cast<int>();
+    } catch (e) {
+      return null;
+    }
   }
 
   @override

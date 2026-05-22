@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'app_info.dart';
 import 'zo_app_blocker_platform_interface.dart';
 
@@ -13,22 +14,36 @@ class ZoAppBlocker {
   /// The singleton instance of [ZoAppBlocker].
   static final ZoAppBlocker instance = ZoAppBlocker._();
 
-  /// Checks the current status of the required permissions.
+  /// Checks the current status of the required accessibility permissions.
   ///
   /// On Android, this checks if the Accessibility Service is enabled.
   /// On iOS, this checks Family Controls authorization.
   /// Returns a [String] representing the status (e.g., 'granted', 'denied').
-  Future<String> checkPermission() {
-    return ZoAppBlockerPlatform.instance.checkPermission();
+  Future<String> checkAccessibilityPermission() {
+    return ZoAppBlockerPlatform.instance.checkAccessibilityPermission();
   }
 
-  /// Requests the necessary permissions to block apps.
+  /// Requests the necessary accessibility permissions to block apps.
   ///
   /// On Android, this opens the device's Accessibility Settings page so the user
   /// can enable the service.
   /// On iOS, this prompts the user for Family Controls authorization.
-  Future<void> requestPermission() {
-    return ZoAppBlockerPlatform.instance.requestPermission();
+  Future<void> requestAccessibilityPermission() {
+    return ZoAppBlockerPlatform.instance.requestAccessibilityPermission();
+  }
+
+  /// Checks the current status of the notification permission.
+  ///
+  /// Returns a [String] representing the status (e.g., 'granted', 'denied').
+  Future<String> checkNotificationPermission() {
+    return ZoAppBlockerPlatform.instance.checkNotificationPermission();
+  }
+
+  /// Requests notification permission from the user.
+  ///
+  /// Required on Android 13+ to show the foreground service notification.
+  Future<void> requestNotificationPermission() {
+    return ZoAppBlockerPlatform.instance.requestNotificationPermission();
   }
 
   /// Retrieves a list of apps that can be blocked.
@@ -38,6 +53,16 @@ class ZoAppBlocker {
   /// opaque tokens for the selected apps/categories.
   Future<List<Map<String, dynamic>>> getApps() {
     return ZoAppBlockerPlatform.instance.getApps();
+  }
+
+  /// Retrieves the icon of a specific app by its [packageName].
+  ///
+  /// Returns a [Uint8List] containing the PNG bytes of the icon, or null
+  /// if the icon cannot be found or is not supported (e.g. on iOS).
+  Future<Uint8List?> getAppIcon(String packageName) async {
+    final bytes = await ZoAppBlockerPlatform.instance.getAppIcon(packageName);
+    if (bytes == null) return null;
+    return Uint8List.fromList(bytes);
   }
 
   /// Retrieves a list of apps that are currently blocked.
