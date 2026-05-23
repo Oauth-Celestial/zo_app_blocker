@@ -67,6 +67,17 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             return
         }
 
+        // ── KEY FIX: Don't process events while overlay is showing ──
+        // When performGlobalAction(HOME) is called in showOverlay(), it triggers
+        // transitional TYPE_WINDOW_STATE_CHANGED events for intermediate packages
+        // (input methods, transition animations, etc.). These are NOT caught by
+        // the systemui/launcher filters above, and they would reach checkAndBlock()
+        // where removeOverlay() was called for non-blocked packages — causing the
+        // overlay to be added then immediately removed (the flicker).
+        // By ignoring ALL events while the overlay is showing, we ensure it stays
+        // until the user explicitly presses the Exit button.
+        if (isOverlayShowing) return
+
         if (packageName != lastPackage) {
             lastPackage = packageName
             checkAndBlock(packageName)
@@ -75,7 +86,15 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     fun checkCurrentForegroundApp() {
         if (lastPackage.isNotEmpty() && lastPackage != "com.android.systemui" && !isLauncherPackage(lastPackage)) {
-            checkAndBlock(lastPackage)
+            val shouldBlock = if (prefsManager.isBlockAll()) true
+                              else prefsManager.getBlockedApps().contains(lastPackage)
+            if (shouldBlock) {
+                showOverlay(lastPackage)
+            } else {
+                removeOverlay()
+            }
+        } else {
+            removeOverlay()
         }
     }
 
@@ -88,9 +107,11 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         if (shouldBlock) {
             showOverlay(packageName)
-        } else {
-            removeOverlay()
         }
+        // NOTE: We intentionally do NOT call removeOverlay() here for non-blocked
+        // apps. The overlay is "sticky" — it persists until the user presses the
+        // Exit button or apps are programmatically unblocked via the Dart API
+        // (which calls checkCurrentForegroundApp). This prevents the flicker bug.
     }
 
     private fun showOverlay(packageName: String) {
