@@ -27,6 +27,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     
+    private lateinit var flutterOverlayManager: FlutterOverlayManager
+    
     @Volatile private var lastPackage: String = ""
     @Volatile private var isOverlayShowing = false
 
@@ -35,9 +37,12 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         instance = this
         prefsManager = PreferencesManager(this)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        flutterOverlayManager = FlutterOverlayManager(this)
         
         if (prefsManager.isBlockAll() || prefsManager.getBlockedApps().isNotEmpty()) {
             AppBlockerForegroundService.start(this)
+            // Pre-warm the FlutterEngine so it's ready when an app is blocked
+            flutterOverlayManager.preWarmEngine()
         }
     }
 
@@ -45,6 +50,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         removeOverlay()
+        flutterOverlayManager.destroy()
         instance = null
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
@@ -67,15 +73,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             return
         }
 
-        // ── KEY FIX: Don't process events while overlay is showing ──
-        // When performGlobalAction(HOME) is called in showOverlay(), it triggers
-        // transitional TYPE_WINDOW_STATE_CHANGED events for intermediate packages
-        // (input methods, transition animations, etc.). These are NOT caught by
-        // the systemui/launcher filters above, and they would reach checkAndBlock()
-        // where removeOverlay() was called for non-blocked packages — causing the
-        // overlay to be added then immediately removed (the flicker).
-        // By ignoring ALL events while the overlay is showing, we ensure it stays
-        // until the user explicitly presses the Exit button.
+        // Ignore events while overlay is showing to prevent flicker
         if (isOverlayShowing) return
 
         if (packageName != lastPackage) {
@@ -108,18 +106,57 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         if (shouldBlock) {
             showOverlay(packageName)
         }
-        // NOTE: We intentionally do NOT call removeOverlay() here for non-blocked
-        // apps. The overlay is "sticky" — it persists until the user presses the
-        // Exit button or apps are programmatically unblocked via the Dart API
-        // (which calls checkCurrentForegroundApp). This prevents the flicker bug.
     }
 
     private fun showOverlay(packageName: String) {
         if (isOverlayShowing) return
         isOverlayShowing = true
 
+        // First line of defense: instantly send them home so they can't interact
         performGlobalAction(GLOBAL_ACTION_HOME)
 
+        // Determine if we should use the Flutter overlay or native overlay
+        if (prefsManager.hasBlockScreenCallback()) {
+            // Get app info for the Flutter context
+            val pm = packageManager
+            var appName: String? = null
+            var appIcon: ByteArray? = null
+            
+            try {
+                val appInfo = pm.getApplicationInfo(packageName, 0)
+                appName = pm.getApplicationLabel(appInfo).toString()
+                
+                val appResolver = AppResolver(this)
+                appIcon = appResolver.getAppIconSync(packageName)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // Let FlutterOverlayManager handle it
+            flutterOverlayManager.showOverlay(packageName, appName, appIcon)
+        } else {
+            // Fall back to the native legacy overlay
+            showNativeOverlay(packageName)
+        }
+    }
+
+    private fun removeOverlay() {
+        if (!isOverlayShowing) return
+        isOverlayShowing = false
+        
+        flutterOverlayManager.hideOverlay()
+        
+        handler.post {
+            try {
+                if (overlayView != null && overlayView?.parent != null) {
+                    windowManager.removeView(overlayView)
+                    overlayView = null
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
+    private fun showNativeOverlay(packageName: String) {
         handler.post {
             try {
                 if (overlayView == null) {
@@ -138,19 +175,6 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             } catch (e: Exception) {
                 isOverlayShowing = false
             }
-        }
-    }
-
-    private fun removeOverlay() {
-        if (!isOverlayShowing) return
-        isOverlayShowing = false
-        handler.post {
-            try {
-                if (overlayView != null) {
-                    windowManager.removeView(overlayView)
-                    overlayView = null
-                }
-            } catch (e: Exception) {}
         }
     }
 

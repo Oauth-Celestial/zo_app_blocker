@@ -52,7 +52,11 @@ class AppResolver(private val context: Context) {
     }
 
     suspend fun getAppIcon(packageName: String): ByteArray? = withContext(Dispatchers.IO) {
-        try {
+        getAppIconSync(packageName)
+    }
+
+    fun getAppIconSync(packageName: String): ByteArray? {
+        return try {
             val pm = context.packageManager
             val info = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
             val icon = info.loadIcon(pm)

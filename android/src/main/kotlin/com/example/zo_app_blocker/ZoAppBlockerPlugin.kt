@@ -124,6 +124,15 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 result.success(null)
             }
+            "saveBlockScreenCallbackHandle" -> {
+                val rawHandle = call.argument<Number>("rawHandle")?.toLong()
+                if (rawHandle != null) {
+                    prefs.saveBlockScreenCallbackHandle(rawHandle)
+                    result.success(null)
+                } else {
+                    result.error("INVALID_ARG", "rawHandle missing or invalid", null)
+                }
+            }
             else -> {
                 result.notImplemented()
             }

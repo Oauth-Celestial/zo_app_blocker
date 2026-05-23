@@ -3,7 +3,72 @@ import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:zo_app_blocker/zo_app_blocker.dart';
 
+@pragma('vm:entry-point')
+void onBlockScreenRequested() {
+  ZoBlockScreenRunner.run(
+    builder: (context) {
+      return Scaffold(
+        backgroundColor: Colors.black87,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (context.appIcon != null)
+                Image.memory(
+                  context.appIcon!,
+                  width: 100,
+                  height: 100,
+                ),
+              const SizedBox(height: 24),
+              Text(
+                '${context.appName ?? 'App'} is Blocked!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'You have customized this screen using Flutter.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 48),
+              ElevatedButton.icon(
+                onPressed: context.onDismiss,
+                icon: const Icon(Icons.exit_to_app),
+                label: const Text('Exit'),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  // In a real app, you would check coins here
+                  // and deduct them if sufficient.
+                  final granted = await context.onRequestUnlock?.call() ?? false;
+                  if (!granted) {
+                    // Could show a snackbar or dialog if unlock failed
+                  }
+                },
+                icon: const Icon(Icons.lock_open),
+                label: const Text('Unlock temporarily (Cost: 50 coins)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white70),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  ZoAppBlocker.instance.initialize(
+    blockScreenCallback: onBlockScreenRequested,
+  );
   runApp(const MyApp());
 }
 
@@ -33,6 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _checkPermission();
     _loadBlockedApps();
+    
+    // Fallback native configuration (used if blockScreenCallback is not set)
     _zoAppBlockerPlugin.setBlockScreenConfig(
       backgroundColor: '#000000',
       title: 'Stop Right There!',
@@ -61,15 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await _zoAppBlockerPlugin.requestNotificationPermission();
       final notifStatus = await _zoAppBlockerPlugin.checkNotificationPermission();
       if (notifStatus != 'granted') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Notification permission is required for the background service.',
-              ),
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Notification permission is required for the background service.',
             ),
-          );
-        }
+          ),
+        );
       }
     }
     await _zoAppBlockerPlugin.requestAccessibilityPermission();
@@ -122,17 +188,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: Text(app['appName'] ?? ''),
                       subtitle: Text(app['packageName'] ?? ''),
                       onTap: () async {
+                        final nav = Navigator.of(context);
+                        final scaffold = ScaffoldMessenger.of(context);
                         await _zoAppBlockerPlugin.blockApps([
                           app['packageName'],
                         ]);
-                        if (mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Blocked ${app['appName']}'),
-                            ),
-                          );
-                        }
+                        if (!mounted) return;
+                        nav.pop();
+                        scaffold.showSnackBar(
+                          SnackBar(
+                            content: Text('Blocked ${app['appName']}'),
+                          ),
+                        );
                         _loadBlockedApps();
                       },
                     );
@@ -144,11 +211,10 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error selecting apps: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error selecting apps: $e')));
     }
   }
 
@@ -178,12 +244,12 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () async {
+                final scaffold = ScaffoldMessenger.of(context);
                 await _zoAppBlockerPlugin.unblockAll();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All apps unblocked')),
-                  );
-                }
+                if (!mounted) return;
+                scaffold.showSnackBar(
+                  const SnackBar(content: Text('All apps unblocked')),
+                );
                 _loadBlockedApps();
               },
               child: const Text('Unblock All Apps'),
