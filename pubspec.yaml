@@ -5,11 +5,7 @@ repository: https://github.com/Oauth-Celestial/zo_app_blocker
 
 environment:
   sdk: '>=2.18.0 <4.0.0'
-<<<<<<< HEAD
   flutter: '>=1.10.0'
-=======
- 
->>>>>>> d7243d27295cec96d95f7d11ef1bc3a3449f0e36
 
 dependencies:
   flutter:
