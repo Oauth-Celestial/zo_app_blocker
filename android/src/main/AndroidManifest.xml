@@ -20,7 +20,6 @@
         <service
             android:name=".AppBlockerAccessibilityService"
             android:exported="true"
-            android:label="Zo App Blocker"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
