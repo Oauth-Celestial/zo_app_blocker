@@ -65,4 +65,15 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
       'setBlockScreenConfig() has not been implemented.',
     );
   }
+
+  /// Saves the callback handle for the block screen Dart entrypoint.
+  ///
+  /// The [rawHandle] is obtained via `PluginUtilities.getCallbackHandle()`
+  /// and is persisted on the native side so the background service can boot
+  /// a FlutterEngine with the correct entrypoint when a blocked app is detected.
+  Future<void> saveBlockScreenCallbackHandle(int rawHandle) {
+    throw UnimplementedError(
+      'saveBlockScreenCallbackHandle() has not been implemented.',
+    );
+  }
 }

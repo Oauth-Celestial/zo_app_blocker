@@ -86,4 +86,11 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
   Future<void> setBlockScreenConfig(Map<String, String> config) async {
     await methodChannel.invokeMethod('setBlockScreenConfig', config);
   }
+
+  @override
+  Future<void> saveBlockScreenCallbackHandle(int rawHandle) async {
+    await methodChannel.invokeMethod('saveBlockScreenCallbackHandle', {
+      'rawHandle': rawHandle,
+    });
+  }
 }

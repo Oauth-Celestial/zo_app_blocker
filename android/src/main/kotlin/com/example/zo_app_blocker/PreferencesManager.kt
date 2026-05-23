@@ -41,4 +41,16 @@ class PreferencesManager(context: Context) {
             "notificationDescription" to prefs.getString("config_notificationDescription", null)
         )
     }
+
+    fun saveBlockScreenCallbackHandle(rawHandle: Long) {
+        prefs.edit().putLong("block_screen_callback_handle", rawHandle).apply()
+    }
+
+    fun getBlockScreenCallbackHandle(): Long {
+        return prefs.getLong("block_screen_callback_handle", -1L)
+    }
+
+    fun hasBlockScreenCallback(): Boolean {
+        return getBlockScreenCallbackHandle() != -1L
+    }
 }
