@@ -62,9 +62,16 @@ class AppBlockerForegroundService : Service() {
         val icon = applicationInfo.icon
         val finalIcon = if (icon != 0) icon else android.R.drawable.ic_dialog_info
 
+        val pm = packageManager
+        val appName = try {
+            applicationInfo.loadLabel(pm).toString()
+        } catch (e: Exception) {
+            "App"
+        }
+
         val prefsManager = PreferencesManager(this)
         val config = prefsManager.getBlockScreenConfig()
-        val title = config["notificationTitle"] ?: "Zo App Blocker Active"
+        val title = config["notificationTitle"] ?: "$appName Blocker Active"
         val desc = config["notificationDescription"] ?: "Monitoring and blocking restricted apps."
 
         return builder

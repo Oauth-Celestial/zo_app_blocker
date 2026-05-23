@@ -30,15 +30,15 @@ class PreferencesManager(context: Context) {
         editor.apply()
     }
 
-    fun getBlockScreenConfig(): Map<String, String> {
+    fun getBlockScreenConfig(): Map<String, String?> {
         return mapOf(
             "backgroundColor" to (prefs.getString("config_backgroundColor", null) ?: "#FF0000"),
             "title" to (prefs.getString("config_title", null) ?: "App Blocked"),
             "titleColor" to (prefs.getString("config_titleColor", null) ?: "#FFFFFF"),
             "description" to (prefs.getString("config_description", null) ?: "This app is blocked."),
             "descriptionColor" to (prefs.getString("config_descriptionColor", null) ?: "#EEEEEE"),
-            "notificationTitle" to (prefs.getString("config_notificationTitle", null) ?: "Zo App Blocker Active"),
-            "notificationDescription" to (prefs.getString("config_notificationDescription", null) ?: "Monitoring and blocking restricted apps.")
+            "notificationTitle" to prefs.getString("config_notificationTitle", null),
+            "notificationDescription" to prefs.getString("config_notificationDescription", null)
         )
     }
 }
