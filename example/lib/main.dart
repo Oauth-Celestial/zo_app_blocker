@@ -218,6 +218,72 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _showActivityLog() async {
+    final log = await _zoAppBlockerPlugin.getBlockActivityLog();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Block Activity Log',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await _zoAppBlockerPlugin.clearBlockActivityLog();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        _showActivityLog();
+                      }
+                    },
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: log.isEmpty
+                  ? const Center(child: Text('No activity yet.'))
+                  : ListView.builder(
+                      itemCount: log.length,
+                      itemBuilder: (context, index) {
+                        final entry = log[index];
+                        final packageName = entry['packageName'] as String;
+                        final timestamp = entry['timestamp'] as int;
+                        final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+                        return ListTile(
+                          leading: FutureBuilder<Uint8List?>(
+                            future: _zoAppBlockerPlugin.getAppIcon(packageName),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const SizedBox(width: 32, height: 32, child: Padding(padding: EdgeInsets.all(4.0), child: CircularProgressIndicator(strokeWidth: 2)));
+                              }
+                              if (snapshot.hasData && snapshot.data != null) {
+                                return Image.memory(snapshot.data!, width: 32, height: 32);
+                              }
+                              return const Icon(Icons.block, size: 32, color: Colors.grey);
+                            },
+                          ),
+                          title: Text(packageName),
+                          subtitle: Text('${date.toLocal()}'.split('.')[0]),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,9 +321,18 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('Unblock All Apps'),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Currently Blocked Apps:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Currently Blocked Apps:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                TextButton(
+                  onPressed: _showActivityLog,
+                  child: const Text('Activity Log'),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Expanded(

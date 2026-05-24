@@ -133,6 +133,22 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     result.error("INVALID_ARG", "rawHandle missing or invalid", null)
                 }
             }
+            "getBlockActivityLog" -> {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val log = prefs.getBlockActivityLog()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        result.success(log)
+                    }
+                }
+            }
+            "clearBlockActivityLog" -> {
+                CoroutineScope(Dispatchers.IO).launch {
+                    prefs.clearBlockActivityLog()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        result.success(null)
+                    }
+                }
+            }
             else -> {
                 result.notImplemented()
             }

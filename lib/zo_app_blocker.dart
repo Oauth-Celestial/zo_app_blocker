@@ -170,4 +170,16 @@ class ZoAppBlocker {
       'notificationDescription': notificationDescription,
     });
   }
+
+  /// Retrieves the history of blocked activities.
+  ///
+  /// Returns a list of maps containing 'packageName' (String) and 'timestamp' (int) in milliseconds.
+  Future<List<Map<String, dynamic>>> getBlockActivityLog() {
+    return ZoAppBlockerPlatform.instance.getBlockActivityLog();
+  }
+
+  /// Clears the history of blocked activities.
+  Future<void> clearBlockActivityLog() {
+    return ZoAppBlockerPlatform.instance.clearBlockActivityLog();
+  }
 }

@@ -76,4 +76,12 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
       'saveBlockScreenCallbackHandle() has not been implemented.',
     );
   }
+
+  Future<List<Map<String, dynamic>>> getBlockActivityLog() {
+    throw UnimplementedError('getBlockActivityLog() has not been implemented.');
+  }
+
+  Future<void> clearBlockActivityLog() {
+    throw UnimplementedError('clearBlockActivityLog() has not been implemented.');
+  }
 }
