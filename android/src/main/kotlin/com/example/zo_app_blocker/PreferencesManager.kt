@@ -1,56 +1,67 @@
 package com.example.zo_app_blocker
 
 import android.content.Context
-import android.content.SharedPreferences
 
 class PreferencesManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("zo_app_blocker_prefs", Context.MODE_PRIVATE)
+    private val dbHelper = DatabaseHelper(context)
 
     fun saveBlockedApps(apps: Set<String>) {
-        prefs.edit().putStringSet("blocked_apps", apps).apply()
+        dbHelper.saveBlockedApps(apps)
     }
 
     fun getBlockedApps(): Set<String> {
-        return prefs.getStringSet("blocked_apps", emptySet()) ?: emptySet()
+        return dbHelper.getBlockedApps()
     }
 
     fun setBlockAll(blockAll: Boolean) {
-        prefs.edit().putBoolean("block_all", blockAll).apply()
+        dbHelper.setPreference("block_all", blockAll.toString())
     }
 
     fun isBlockAll(): Boolean {
-        return prefs.getBoolean("block_all", false)
+        val value = dbHelper.getPreference("block_all", "false")
+        return value == "true"
     }
 
     fun setBlockScreenConfig(config: Map<String, String>) {
-        val editor = prefs.edit()
         config.forEach { (key, value) ->
-            editor.putString("config_$key", value)
+            dbHelper.setPreference("config_$key", value)
         }
-        editor.apply()
     }
 
     fun getBlockScreenConfig(): Map<String, String?> {
         return mapOf(
-            "backgroundColor" to (prefs.getString("config_backgroundColor", null) ?: "#FF0000"),
-            "title" to (prefs.getString("config_title", null) ?: "App Blocked"),
-            "titleColor" to (prefs.getString("config_titleColor", null) ?: "#FFFFFF"),
-            "description" to (prefs.getString("config_description", null) ?: "This app is blocked."),
-            "descriptionColor" to (prefs.getString("config_descriptionColor", null) ?: "#EEEEEE"),
-            "notificationTitle" to prefs.getString("config_notificationTitle", null),
-            "notificationDescription" to prefs.getString("config_notificationDescription", null)
+            "backgroundColor" to (dbHelper.getPreference("config_backgroundColor", null) ?: "#FF0000"),
+            "title" to (dbHelper.getPreference("config_title", null) ?: "App Blocked"),
+            "titleColor" to (dbHelper.getPreference("config_titleColor", null) ?: "#FFFFFF"),
+            "description" to (dbHelper.getPreference("config_description", null) ?: "This app is blocked."),
+            "descriptionColor" to (dbHelper.getPreference("config_descriptionColor", null) ?: "#EEEEEE"),
+            "notificationTitle" to dbHelper.getPreference("config_notificationTitle", null),
+            "notificationDescription" to dbHelper.getPreference("config_notificationDescription", null)
         )
     }
 
     fun saveBlockScreenCallbackHandle(rawHandle: Long) {
-        prefs.edit().putLong("block_screen_callback_handle", rawHandle).apply()
+        dbHelper.setPreference("block_screen_callback_handle", rawHandle.toString())
     }
 
     fun getBlockScreenCallbackHandle(): Long {
-        return prefs.getLong("block_screen_callback_handle", -1L)
+        val value = dbHelper.getPreference("block_screen_callback_handle", "-1")
+        return value?.toLongOrNull() ?: -1L
     }
 
     fun hasBlockScreenCallback(): Boolean {
         return getBlockScreenCallbackHandle() != -1L
+    }
+
+    fun logBlockEvent(packageName: String) {
+        dbHelper.logBlockEvent(packageName)
+    }
+
+    fun getBlockActivityLog(): List<Map<String, Any>> {
+        return dbHelper.getBlockActivityLog()
+    }
+
+    fun clearBlockActivityLog() {
+        dbHelper.clearBlockActivityLog()
     }
 }

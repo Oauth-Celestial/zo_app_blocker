@@ -93,4 +93,18 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
       'rawHandle': rawHandle,
     });
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> getBlockActivityLog() async {
+    final List<dynamic>? result = await methodChannel.invokeMethod(
+      'getBlockActivityLog',
+    );
+    if (result == null) return [];
+    return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<void> clearBlockActivityLog() async {
+    await methodChannel.invokeMethod('clearBlockActivityLog');
+  }
 }

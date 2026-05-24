@@ -114,6 +114,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         // First line of defense: instantly send them home so they can't interact
         performGlobalAction(GLOBAL_ACTION_HOME)
+        
+        prefsManager.logBlockEvent(packageName)
 
         // Determine if we should use the Flutter overlay or native overlay
         if (prefsManager.hasBlockScreenCallback()) {
