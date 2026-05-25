@@ -78,12 +78,15 @@ class BlockScreenContext {
   /// onPressed: () async {
   ///   if (userCoins >= 50) {
   ///     userCoins -= 50;
-  ///     final granted = await context.onRequestUnlock?.call() ?? false;
+  ///     // Unlock for 30 minutes
+  ///     final granted = await context.onRequestUnlock?.call(
+  ///       duration: const Duration(minutes: 30),
+  ///     ) ?? false;
   ///     if (granted) {
   ///       // The blocked app is temporarily accessible!
   ///     }
   ///   }
   /// }
   /// ```
-  final Future<bool> Function()? onRequestUnlock;
+  final Future<bool> Function({required Duration duration})? onRequestUnlock;
 }

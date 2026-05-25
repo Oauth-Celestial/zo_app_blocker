@@ -81,9 +81,11 @@ class ZoBlockScreenRunner {
           onDismiss: () {
             _channel.invokeMethod<void>('dismissBlockScreen');
           },
-          onRequestUnlock: () async {
-            final result =
-                await _channel.invokeMethod<bool>('requestUnlock');
+          onRequestUnlock: ({required Duration duration}) async {
+            final result = await _channel.invokeMethod<bool>(
+              'requestUnlock',
+              {'durationMinutes': duration.inMinutes},
+            );
             return result ?? false;
           },
         );

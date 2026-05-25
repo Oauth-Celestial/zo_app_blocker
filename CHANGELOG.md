@@ -5,4 +5,7 @@
 ## 0.0.2
 
 * Fixed Backward compatibility and added request permission natively.
-* 
+
+## 0.0.3
+
+* Fixed KGP issue and added custom block screen feature with flicker fix on blocked app

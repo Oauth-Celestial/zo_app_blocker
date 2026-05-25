@@ -44,7 +44,12 @@ void onBlockScreenRequested() {
                 onPressed: () async {
                   // In a real app, you would check coins here
                   // and deduct them if sufficient.
-                  final granted = await context.onRequestUnlock?.call() ?? false;
+                  
+                  // Unlock for 15 minutes
+                  final granted = await context.onRequestUnlock?.call(
+                        duration: const Duration(minutes: 15),
+                      ) ??
+                      false;
                   if (!granted) {
                     // Could show a snackbar or dialog if unlock failed
                   }
