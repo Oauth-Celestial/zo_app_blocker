@@ -60,9 +60,9 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
     throw UnimplementedError('unblockAll() has not been implemented.');
   }
 
-  Future<void> setBlockScreenConfig(Map<String, String> config) {
+  Future<void> setNotificationConfig(Map<String, String> config) {
     throw UnimplementedError(
-      'setBlockScreenConfig() has not been implemented.',
+      'setNotificationConfig() has not been implemented.',
     );
   }
 

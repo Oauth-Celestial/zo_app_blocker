@@ -87,86 +87,7 @@ if (status == 'denied') {
 
 ## Usage
 
-### 1. Style your block screen
-
-Before you block anything, you may want to customize the screen that shows up. You can also customize the background notification here.
-
-```dart
-import 'package:zo_app_blocker/zo_app_blocker.dart';
-
-// ...
-
-await ZoAppBlocker.instance.setBlockScreenConfig(
-  backgroundColor: '#F44336', // Hex color strings
-  title: 'Stop Right There!',
-  titleColor: '#FFFFFF',
-  description: 'You blocked this app. Get back to work!',
-  descriptionColor: '#DDDDDD',
-  notificationTitle: 'Focus Mode Active', 
-  notificationDescription: 'Monitoring your apps in the background.'
-);
-```
-
-### 2. Get a list of installed apps
-
-If you need to show the user a list of apps they can block, you can fetch all installed apps:
-
-```dart
-import 'package:zo_app_blocker/zo_app_blocker.dart';
-
-// ...
-
-final installedApps = await ZoAppBlocker.instance.getApps();
-// Returns a list containing maps, e.g.:
-// [{"packageName": "com.facebook.katana", "appName": "Facebook"}, ...]
-```
-
-### 3. Start blocking
-
-Just pass a list of package names to the plugin. Once you call this, the Foreground Service starts up automatically.
-
-```dart
-import 'package:zo_app_blocker/zo_app_blocker.dart';
-
-// ...
-
-await ZoAppBlocker.instance.blockApps([
-  'com.instagram.android',
-  'com.facebook.katana',
-]);
-```
-
-### 4. Unblock apps
-
-You can remove specific apps from the blocklist, or just unblock everything (which also stops the background service).
-
-```dart
-import 'package:zo_app_blocker/zo_app_blocker.dart';
-
-// ...
-
-// Unblock specific ones
-await ZoAppBlocker.instance.unblockApps(['com.facebook.katana']);
-
-// Unblock everything and stop the service
-await ZoAppBlocker.instance.unblockAll();
-```
-
-### 5. Get App Icon
-
-Retrieve the PNG-encoded icon bytes for a specific package:
-
-```dart
-import 'dart:typed_data';
-import 'package:zo_app_blocker/zo_app_blocker.dart';
-
-Uint8List? iconBytes = await ZoAppBlocker.instance.getAppIcon('com.instagram.android');
-if (iconBytes != null) {
-  // Render via Image.memory(iconBytes)
-}
-```
-
-### 6. Custom Block Screen (Headless Flutter Overlay)
+### 1. Custom Block Screen (Headless Flutter Overlay)
 
 You can build a fully custom block screen using Flutter widgets. Since the background service runs in a separate headless Flutter isolate, you must register a **top-level or static function** annotated with `@pragma('vm:entry-point')` at app startup.
 
@@ -235,6 +156,80 @@ void main() {
 }
 ```
 
+### 2. Configure Background Notification
+
+You can customize the background service notification to let the user know their apps are being monitored.
+
+```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
+await ZoAppBlocker.instance.setNotificationConfig(
+  notificationBannerTitle: 'Focus Mode Active', 
+  notificationBannerDescription: 'Monitoring your apps in the background.',
+  // notificationIcon: 'ic_launcher', // Optional custom icon name in drawable/mipmap
+);
+```
+
+### 3. Get a list of installed apps
+
+If you need to show the user a list of apps they can block, you can fetch all installed apps:
+
+```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
+final installedApps = await ZoAppBlocker.instance.getApps();
+// Returns a list containing maps, e.g.:
+// [{"packageName": "com.facebook.katana", "appName": "Facebook"}, ...]
+```
+
+### 4. Start blocking
+
+Just pass a list of package names to the plugin. Once you call this, the Foreground Service starts up automatically.
+
+```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
+await ZoAppBlocker.instance.blockApps([
+  'com.instagram.android',
+  'com.facebook.katana',
+]);
+```
+
+### 5. Unblock apps
+
+You can remove specific apps from the blocklist, or just unblock everything (which also stops the background service).
+
+```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// ...
+
+// Unblock specific ones
+await ZoAppBlocker.instance.unblockApps(['com.facebook.katana']);
+
+// Unblock everything and stop the service
+await ZoAppBlocker.instance.unblockAll();
+```
+
+### 6. Get App Icon
+
+Retrieve the PNG-encoded icon bytes for a specific package:
+
+```dart
+import 'dart:typed_data';
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+Uint8List? iconBytes = await ZoAppBlocker.instance.getAppIcon('com.instagram.android');
+if (iconBytes != null) {
+  // Render via Image.memory(iconBytes)
+}
+```
 
 ### 7. Block Activity Log
 

@@ -113,10 +113,10 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 context?.let { AppBlockerForegroundService.stop(it) }
                 result.success(null)
             }
-            "setBlockScreenConfig" -> {
+            "setNotificationConfig" -> {
                 val configArgs = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                 val config = configArgs.entries.associate { it.key.toString() to it.value.toString() }
-                prefs.setBlockScreenConfig(config)
+                prefs.setNotificationConfig(config)
                 
                 // If the service is running, restart it to apply new notification titles
                 if (prefs.isBlockAll() || prefs.getBlockedApps().isNotEmpty()) {

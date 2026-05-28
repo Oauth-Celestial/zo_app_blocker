@@ -220,7 +220,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     }
 
     private fun createOverlayView(packageName: String): View {
-        val config = prefsManager.getBlockScreenConfig()
+        val config = prefsManager.getNotificationConfig()
         
         val bgColor = parseColorSafe(config["backgroundColor"], "#F44336")
         val tColor = parseColorSafe(config["titleColor"], "#FFFFFF")
@@ -234,7 +234,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         }
 
         val titleView = TextView(this).apply {
-            text = config["title"]
+            text = config["title"] ?: "App Blocked"
             setTextColor(tColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -243,7 +243,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         }
 
         val descView = TextView(this).apply {
-            text = config["description"]
+            text = config["description"] ?: "This app is blocked."
             setTextColor(dColor)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             gravity = Gravity.CENTER

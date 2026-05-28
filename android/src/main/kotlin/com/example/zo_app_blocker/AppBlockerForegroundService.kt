@@ -57,11 +57,6 @@ class AppBlockerForegroundService : Service() {
             Notification.Builder(this)
         }
 
-        // We use a generic built-in icon if possible, but it's best practice to use an app icon.
-        // For simplicity in a plugin, we'll try to get the application icon, or fallback to a standard one.
-        val icon = applicationInfo.icon
-        val finalIcon = if (icon != 0) icon else android.R.drawable.ic_dialog_info
-
         val pm = packageManager
         val appName = try {
             applicationInfo.loadLabel(pm).toString()
@@ -70,9 +65,25 @@ class AppBlockerForegroundService : Service() {
         }
 
         val prefsManager = PreferencesManager(this)
-        val config = prefsManager.getBlockScreenConfig()
-        val title = config["notificationTitle"] ?: "$appName Blocker Active"
-        val desc = config["notificationDescription"] ?: "Monitoring and blocking restricted apps."
+        val config = prefsManager.getNotificationConfig()
+        val title = config["notificationBannerTitle"] ?: "$appName Blocker Active"
+        val desc = config["notificationBannerDescription"] ?: "Monitoring and blocking restricted apps."
+
+        var finalIcon = applicationInfo.icon
+        val customIconName = config["notificationIcon"]
+        if (customIconName != null) {
+            var resId = resources.getIdentifier(customIconName, "drawable", packageName)
+            if (resId == 0) {
+                resId = resources.getIdentifier(customIconName, "mipmap", packageName)
+            }
+            if (resId != 0) {
+                finalIcon = resId
+            }
+        }
+
+        if (finalIcon == 0) {
+            finalIcon = android.R.drawable.ic_dialog_info
+        }
 
         return builder
             .setContentTitle(title)

@@ -22,21 +22,17 @@ class PreferencesManager(context: Context) {
         return value == "true"
     }
 
-    fun setBlockScreenConfig(config: Map<String, String>) {
+    fun setNotificationConfig(config: Map<String, String>) {
         config.forEach { (key, value) ->
             dbHelper.setPreference("config_$key", value)
         }
     }
 
-    fun getBlockScreenConfig(): Map<String, String?> {
+    fun getNotificationConfig(): Map<String, String?> {
         return mapOf(
-            "backgroundColor" to (dbHelper.getPreference("config_backgroundColor", null) ?: "#FF0000"),
-            "title" to (dbHelper.getPreference("config_title", null) ?: "App Blocked"),
-            "titleColor" to (dbHelper.getPreference("config_titleColor", null) ?: "#FFFFFF"),
-            "description" to (dbHelper.getPreference("config_description", null) ?: "This app is blocked."),
-            "descriptionColor" to (dbHelper.getPreference("config_descriptionColor", null) ?: "#EEEEEE"),
-            "notificationTitle" to dbHelper.getPreference("config_notificationTitle", null),
-            "notificationDescription" to dbHelper.getPreference("config_notificationDescription", null)
+            "notificationBannerTitle" to dbHelper.getPreference("config_notificationBannerTitle", null),
+            "notificationBannerDescription" to dbHelper.getPreference("config_notificationBannerDescription", null),
+            "notificationIcon" to dbHelper.getPreference("config_notificationIcon", null)
         )
     }
 
