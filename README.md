@@ -152,6 +152,105 @@ await ZoAppBlocker.instance.unblockApps(['com.facebook.katana']);
 await ZoAppBlocker.instance.unblockAll();
 ```
 
+### 5. Get App Icon
+
+Retrieve the PNG-encoded icon bytes for a specific package:
+
+```dart
+import 'dart:typed_data';
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+Uint8List? iconBytes = await ZoAppBlocker.instance.getAppIcon('com.instagram.android');
+if (iconBytes != null) {
+  // Render via Image.memory(iconBytes)
+}
+```
+
+### 6. Custom Block Screen (Headless Flutter Overlay)
+
+You can build a fully custom block screen using Flutter widgets. Since the background service runs in a separate headless Flutter isolate, you must register a **top-level or static function** annotated with `@pragma('vm:entry-point')` at app startup.
+
+#### 1. Define the custom entrypoint function:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+@pragma('vm:entry-point')
+void onBlockScreenRequested() {
+  ZoBlockScreenRunner.run(
+    builder: (context) {
+      return Scaffold(
+        backgroundColor: Colors.black87,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (context.appIcon != null)
+                Image.memory(context.appIcon!, width: 100, height: 100),
+              const SizedBox(height: 24),
+              Text(
+                '${context.appName ?? 'App'} is Blocked!',
+                style: const TextStyle(color: Colors.white, fontSize: 24),
+              ),
+              const SizedBox(height: 48),
+              // Dismiss button
+              ElevatedButton(
+                onPressed: context.onDismiss,
+                child: const Text('Exit'),
+              ),
+              const SizedBox(height: 16),
+              // Unlock button with self-documenting Duration parameter
+              OutlinedButton(
+                onPressed: () async {
+                  final granted = await context.onRequestUnlock?.call(
+                    duration: const Duration(minutes: 15),
+                  ) ?? false;
+                  if (granted) {
+                    // Temporarily unlocked!
+                  }
+                },
+                child: const Text('Unlock for 15 mins (50 coins)'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+```
+
+#### 2. Initialize the plugin at startup (e.g., in `main()`):
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  ZoAppBlocker.instance.initialize(
+    blockScreenCallback: onBlockScreenRequested,
+  );
+  
+  runApp(const MyApp());
+}
+```
+
+
+### 7. Block Activity Log
+
+Monitor block events in your application by retrieving the activity log:
+
+```dart
+// Get the list of recorded block events
+List<Map<String, dynamic>> log = await ZoAppBlocker.instance.getBlockActivityLog();
+// Returns [{"packageName": "com.instagram.android", "timestamp": 1716612345678}]
+
+// Clear the activity log
+await ZoAppBlocker.instance.clearBlockActivityLog();
+```
+
+---
+
 Feel free to post a feature requests or report a bug [issues](https://github.com/Oauth-Celestial/zo_app_blocker/issues).
 
 ## My Other packages

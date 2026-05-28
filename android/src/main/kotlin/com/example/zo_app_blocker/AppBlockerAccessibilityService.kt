@@ -32,6 +32,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     @Volatile private var lastPackage: String = ""
     @Volatile private var isOverlayShowing = false
 
+    // Map of packageName -> Expiration Time (Unix Epoch in ms)
+    private val temporaryWhitelist = mutableMapOf<String, Long>()
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -84,6 +87,13 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     fun checkCurrentForegroundApp() {
         if (lastPackage.isNotEmpty() && lastPackage != "com.android.systemui" && !isLauncherPackage(lastPackage)) {
+            
+            val whitelistExpiration = temporaryWhitelist[lastPackage]
+            if (whitelistExpiration != null && System.currentTimeMillis() < whitelistExpiration) {
+                removeOverlay()
+                return
+            }
+            
             val shouldBlock = if (prefsManager.isBlockAll()) true
                               else prefsManager.getBlockedApps().contains(lastPackage)
             if (shouldBlock) {
@@ -96,7 +106,36 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun temporarilyUnblock(packageName: String, durationMinutes: Int = 15) {
+        val durationMs = durationMinutes * 60 * 1000L
+        val expiration = System.currentTimeMillis() + durationMs
+        temporaryWhitelist[packageName] = expiration
+        // Clear lastPackage so if they are already in the app, it can be re-evaluated
+        // when they come back later, or allow them to immediately use it.
+        if (lastPackage == packageName) {
+            lastPackage = ""
+        }
+        
+        // Auto-block the app when the time expires
+        handler.postDelayed({
+            // Force re-eval of current foreground app
+            checkCurrentForegroundApp()
+        }, durationMs)
+    }
+
     private fun checkAndBlock(packageName: String) {
+        // Check if it's temporarily whitelisted
+        val whitelistExpiration = temporaryWhitelist[packageName]
+        if (whitelistExpiration != null) {
+            if (System.currentTimeMillis() < whitelistExpiration) {
+                // Still whitelisted, do not block
+                return
+            } else {
+                // Expired, remove from whitelist
+                temporaryWhitelist.remove(packageName)
+            }
+        }
+
         val shouldBlock = if (prefsManager.isBlockAll()) {
             true
         } else {

@@ -1,6 +1,7 @@
 package com.example.zo_app_blocker
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
@@ -32,6 +33,7 @@ class FlutterOverlayManager(private val context: Context) {
 
     private var isOverlayShowing = false
     private var isEngineReady = false
+    private var currentBlockedPackage: String? = null
 
     // We cache the last blocked app data in case the engine is still booting
     // when the block request comes in, so we can send it once ready.
@@ -87,17 +89,21 @@ class FlutterOverlayManager(private val context: Context) {
                 }
                 "requestUnlock" -> {
                     // Temporarily unlock the app
-                    // Note: In a real app, you might want to specify duration here,
-                    // or handle it in Dart. For now, we just hide the overlay.
                     hideOverlay()
-                    // By removing the overlay and NOT sending them home, they 
-                    // gain access to the app underneath.
-                    // The AppBlockerAccessibilityService needs to know not to immediately
-                    // block it again. 
-                    // Since checkAndBlock is triggered on WINDOW_STATE_CHANGED, and 
-                    // they are already in the app, it shouldn't re-trigger until they leave
-                    // and come back.
-                    // For a robust implementation, you'd add the package to a temporary whitelist.
+                    
+                    val durationMinutes = call.argument<Int>("durationMinutes") ?: 15
+                    
+                    currentBlockedPackage?.let { pkg ->
+                        // 1. Tell the service to temporarily whitelist this app
+                        AppBlockerAccessibilityService.instance?.temporarilyUnblock(pkg, durationMinutes)
+                        
+                        // 2. Launch the app so the user is thrown right back into it
+                        val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(launchIntent)
+                        }
+                    }
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -117,6 +123,7 @@ class FlutterOverlayManager(private val context: Context) {
      */
     fun showOverlay(packageName: String, appName: String?, appIcon: ByteArray?) {
         if (isOverlayShowing) return
+        currentBlockedPackage = packageName
 
         handler.post {
             // Ensure engine is started
