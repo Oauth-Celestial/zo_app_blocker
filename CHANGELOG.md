@@ -8,4 +8,7 @@
 
 ## 0.0.3
 
-* Fixed KGP issue and added custom block screen feature with flicker fix on blocked app
+* **New Feature:** Added  Flutter Overlays for custom block screens.
+* **Enhancement:** Renamed `setBlockScreenConfig` to `setNotificationConfig`.
+* **Fix:** Resolved Kotlin Gradle Plugin (KGP) build compatibility issues.
+* **Fix:** Fixed a screen flicker issue when launching a blocked application.
