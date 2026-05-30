@@ -49,10 +49,18 @@ class ZoBlockScreenRunner {
   /// 3. Calls [builder] with a [BlockScreenContext] containing the blocked app info
   /// 4. Renders the returned widget as a fullscreen overlay
   ///
+  /// Updates to the same blocked package (e.g. icon arriving after the overlay
+  /// is already displayed) are handled reactively — the widget is updated
+  /// in-place without a flicker-inducing full `runApp()` call.
+  ///
   /// If [builder] is not provided, the package's built-in default block screen
   /// is used.
   static void run({BlockScreenWidgetBuilder? builder}) {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // ValueNotifier holds the current BlockScreenContext and drives reactive
+    // updates when the icon/name arrives asynchronously.
+    final contextNotifier = ValueNotifier<BlockScreenContext?>(null);
 
     // Notify native side that the Dart isolate is ready to receive events.
     _channel.invokeMethod<void>('blockScreenReady');
@@ -74,7 +82,7 @@ class ZoBlockScreenRunner {
           }
         }
 
-        final context = BlockScreenContext(
+        final newContext = BlockScreenContext(
           packageName: packageName,
           appName: appName,
           appIcon: appIcon,
@@ -90,18 +98,53 @@ class ZoBlockScreenRunner {
           },
         );
 
-        final widget = builder != null
-            ? builder(context)
-            : _DefaultBlockScreen(context: context);
-
-        runApp(
-          MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: widget,
-          ),
-        );
+        final current = contextNotifier.value;
+        if (current == null) {
+          // First block event for a new package — boot the UI.
+          contextNotifier.value = newContext;
+          runApp(
+            _BlockScreenApp(
+              contextNotifier: contextNotifier,
+              builder: builder,
+            ),
+          );
+        } else {
+          // Subsequent event for the same (or new) package — update reactively.
+          // This handles the two-phase pattern:
+          //   phase 1: overlay shown immediately with null icon/name
+          //   phase 2: icon/name arrives from background thread, widget updates in-place
+          contextNotifier.value = newContext;
+        }
       }
     });
+  }
+}
+
+/// Root app widget that holds the [contextNotifier] and rebuilds
+/// reactively when the blocked app data updates (e.g. icon arrives).
+class _BlockScreenApp extends StatelessWidget {
+  const _BlockScreenApp({
+    required this.contextNotifier,
+    this.builder,
+  });
+
+  final ValueNotifier<BlockScreenContext?> contextNotifier;
+  final BlockScreenWidgetBuilder? builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: ValueListenableBuilder<BlockScreenContext?>(
+        valueListenable: contextNotifier,
+        builder: (_, ctx, __) {
+          if (ctx == null) return const SizedBox.shrink();
+          return builder != null
+              ? builder!(ctx)
+              : _DefaultBlockScreen(context: ctx);
+        },
+      ),
+    );
   }
 }
 
