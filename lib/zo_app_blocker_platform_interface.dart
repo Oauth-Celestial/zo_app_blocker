@@ -84,4 +84,27 @@ abstract class ZoAppBlockerPlatform extends PlatformInterface {
   Future<void> clearBlockActivityLog() {
     throw UnimplementedError('clearBlockActivityLog() has not been implemented.');
   }
+
+  // ---------------------------------------------------------------------------
+  // Time Limit API
+  // ---------------------------------------------------------------------------
+
+  Future<void> setAppTimeLimit({
+    required String packageName,
+    required int dailyLimitMinutes,
+  }) {
+    throw UnimplementedError('setAppTimeLimit() has not been implemented.');
+  }
+
+  Future<void> removeAppTimeLimit(String packageName) {
+    throw UnimplementedError('removeAppTimeLimit() has not been implemented.');
+  }
+
+  Future<List<Map<String, dynamic>>> getAppTimeLimits() {
+    throw UnimplementedError('getAppTimeLimits() has not been implemented.');
+  }
+
+  Future<void> resetAppUsage(String packageName) {
+    throw UnimplementedError('resetAppUsage() has not been implemented.');
+  }
 }

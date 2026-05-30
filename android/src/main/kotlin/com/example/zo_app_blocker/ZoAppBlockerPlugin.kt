@@ -149,6 +149,88 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     }
                 }
             }
+
+            // -----------------------------------------------------------------
+            // Time Limit API
+            // -----------------------------------------------------------------
+
+            "setAppTimeLimit" -> {
+                val packageName = call.argument<String>("packageName")
+                    ?: return result.error("INVALID_ARG", "packageName missing", null)
+                val dailyLimitMinutes = call.argument<Int>("dailyLimitMinutes")
+                    ?: return result.error("INVALID_ARG", "dailyLimitMinutes missing", null)
+
+                val limitSeconds = dailyLimitMinutes * 60L
+                prefs.setAppTimeLimit(packageName, limitSeconds)
+
+                // Ensure the foreground service is running so it can track usage.
+                context?.let { AppBlockerForegroundService.start(it) }
+                result.success(null)
+            }
+
+            "removeAppTimeLimit" -> {
+                val packageName = call.argument<String>("packageName")
+                    ?: return result.error("INVALID_ARG", "packageName missing", null)
+
+                prefs.removeAppTimeLimit(packageName)
+
+                // If this package was only blocked because of the time limit, unblock it.
+                val blocked = prefs.getBlockedApps().toMutableSet()
+                if (blocked.remove(packageName)) {
+                    prefs.saveBlockedApps(blocked)
+                    AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                }
+
+                // Stop service if nothing left to track.
+                if (!prefs.isBlockAll() && blocked.isEmpty() && prefs.getTimeLimitedPackages().isEmpty()) {
+                    context?.let { AppBlockerForegroundService.stop(it) }
+                }
+                result.success(null)
+            }
+
+            "getAppTimeLimits" -> {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val limits = prefs.getAppTimeLimits().map { row ->
+                        val limitSec = (row["dailyLimitSeconds"] as? Long) ?: 0L
+                        val usedSec  = (row["usedSeconds"]       as? Long) ?: 0L
+                        val remSec   = (row["remainingSeconds"]   as? Long) ?: 0L
+                        mapOf(
+                            "packageName"        to row["packageName"],
+                            "dailyLimitMinutes"  to (limitSec / 60).toInt(),
+                            "usedMinutes"        to (usedSec  / 60).toInt(),
+                            "remainingMinutes"   to (remSec   / 60).toInt(),
+                            "dailyLimitSeconds"  to limitSec,
+                            "usedSeconds"        to usedSec,
+                            "remainingSeconds"   to remSec
+                        )
+                    }
+                    CoroutineScope(Dispatchers.Main).launch {
+                        result.success(limits)
+                    }
+                }
+            }
+
+            "resetAppUsage" -> {
+                val packageName = call.argument<String>("packageName")
+                    ?: return result.error("INVALID_ARG", "packageName missing", null)
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    prefs.resetAppUsage(packageName)
+
+                    // If the app was blocked due to limit exhaustion, unblock it.
+                    val blocked = prefs.getBlockedApps().toMutableSet()
+                    if (blocked.remove(packageName)) {
+                        prefs.saveBlockedApps(blocked)
+                        CoroutineScope(Dispatchers.Main).launch {
+                            AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                        }
+                    }
+                    CoroutineScope(Dispatchers.Main).launch {
+                        result.success(null)
+                    }
+                }
+            }
+
             else -> {
                 result.notImplemented()
             }

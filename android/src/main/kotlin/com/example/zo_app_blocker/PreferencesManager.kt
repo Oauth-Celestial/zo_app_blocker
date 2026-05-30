@@ -72,4 +72,85 @@ class PreferencesManager(context: Context) {
     fun clearBlockActivityLog() {
         dbHelper.clearBlockActivityLog()
     }
+
+    // -------------------------------------------------------------------------
+    // Time Limit API
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sets a daily time limit (in seconds) for [packageName].
+     * Resets usage to 0 immediately.
+     */
+    fun setAppTimeLimit(packageName: String, limitSeconds: Long) {
+        dbHelper.setAppTimeLimit(packageName, limitSeconds)
+    }
+
+    /**
+     * Returns all configured time limits with current-day usage stats.
+     * Each map contains: packageName, dailyLimitSeconds, usedSeconds, remainingSeconds.
+     */
+    fun getAppTimeLimits(): List<Map<String, Any>> {
+        return dbHelper.getAppTimeLimits()
+    }
+
+    /**
+     * Returns the time limit info for a single package, or null if none is set.
+     */
+    fun getAppTimeLimit(packageName: String): Map<String, Any>? {
+        return dbHelper.getAppTimeLimit(packageName)
+    }
+
+    /**
+     * Records [seconds] of active foreground usage for [packageName].
+     * Returns remaining seconds (0 means the budget is exhausted).
+     */
+    fun addUsedSeconds(packageName: String, seconds: Long): Long {
+        return dbHelper.addUsedSeconds(packageName, seconds)
+    }
+
+    /**
+     * Resets today's usage counter for [packageName] to 0.
+     */
+    fun resetAppUsage(packageName: String) {
+        dbHelper.resetAppUsage(packageName)
+    }
+
+    /**
+     * Resets daily usage counters for ALL time-limited apps. Called at midnight.
+     */
+    fun resetAllDailyUsage() {
+        dbHelper.resetAllDailyUsage()
+    }
+
+    /**
+     * Permanently removes the time limit for [packageName].
+     */
+    fun removeAppTimeLimit(packageName: String) {
+        dbHelper.removeAppTimeLimit(packageName)
+    }
+
+    /**
+     * Returns true if [packageName] has a time limit and today's usage has
+     * reached or exceeded that limit.
+     */
+    fun isTimeLimitExhausted(packageName: String): Boolean {
+        val info = dbHelper.getAppTimeLimit(packageName) ?: return false
+        val remaining = info["remainingSeconds"] as? Long ?: return false
+        return remaining <= 0L
+    }
+
+    /**
+     * Returns remaining seconds for [packageName], or Long.MAX_VALUE if no limit.
+     */
+    fun getRemainingSeconds(packageName: String): Long {
+        val info = dbHelper.getAppTimeLimit(packageName) ?: return Long.MAX_VALUE
+        return (info["remainingSeconds"] as? Long) ?: Long.MAX_VALUE
+    }
+
+    /**
+     * Returns the set of package names that have a time limit configured.
+     */
+    fun getTimeLimitedPackages(): Set<String> {
+        return dbHelper.getTimeLimitedPackages()
+    }
 }

@@ -107,4 +107,42 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
   Future<void> clearBlockActivityLog() async {
     await methodChannel.invokeMethod('clearBlockActivityLog');
   }
+
+  // ---------------------------------------------------------------------------
+  // Time Limit API
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> setAppTimeLimit({
+    required String packageName,
+    required int dailyLimitMinutes,
+  }) async {
+    await methodChannel.invokeMethod<void>('setAppTimeLimit', {
+      'packageName': packageName,
+      'dailyLimitMinutes': dailyLimitMinutes,
+    });
+  }
+
+  @override
+  Future<void> removeAppTimeLimit(String packageName) async {
+    await methodChannel.invokeMethod<void>('removeAppTimeLimit', {
+      'packageName': packageName,
+    });
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAppTimeLimits() async {
+    final List<dynamic>? result = await methodChannel.invokeMethod(
+      'getAppTimeLimits',
+    );
+    if (result == null) return [];
+    return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<void> resetAppUsage(String packageName) async {
+    await methodChannel.invokeMethod<void>('resetAppUsage', {
+      'packageName': packageName,
+    });
+  }
 }

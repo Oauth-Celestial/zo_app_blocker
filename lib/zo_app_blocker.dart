@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 import 'dart:ui';
-
 import 'zo_app_blocker_platform_interface.dart';
+import 'src/app_time_limit.dart';
 
 export 'app_info.dart';
 export 'src/block_screen_context.dart';
 export 'src/zo_block_screen_runner.dart';
+export 'src/app_time_limit.dart';
 
 /// The main entry point for the Zo App Blocker plugin.
 ///
@@ -149,7 +150,8 @@ class ZoAppBlocker {
   ///     application icon is used.
   Future<void> setNotificationConfig({
     String notificationBannerTitle = 'App Blocker Active',
-    String notificationBannerDescription = 'Monitoring and blocking restricted apps.',
+    String notificationBannerDescription =
+        'Monitoring and blocking restricted apps.',
     String? notificationIcon,
   }) {
     final config = {
@@ -172,5 +174,88 @@ class ZoAppBlocker {
   /// Clears the history of blocked activities.
   Future<void> clearBlockActivityLog() {
     return ZoAppBlockerPlatform.instance.clearBlockActivityLog();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Daily Time Limit API
+  // ---------------------------------------------------------------------------
+
+  /// Sets a daily usage time limit for a specific app.
+  ///
+  /// Once the user has spent [dailyLimitMinutes] minutes in [packageName] today,
+  /// the app is automatically blocked for the remainder of the day. The counter
+  /// resets to zero at midnight.
+  ///
+  /// The foreground service notification updates in real-time while the app is
+  /// open, showing the remaining budget (e.g. `"Instagram — 47 min 23 sec remaining today"`).
+  ///
+  /// Calling this method again for the same [packageName] overwrites the limit
+  /// and resets today's usage to zero.
+  ///
+  /// Example:
+  /// ```dart
+  /// await ZoAppBlocker.instance.setAppTimeLimit(
+  ///   packageName: 'com.instagram.android',
+  ///   dailyLimitMinutes: 50,
+  /// );
+  /// ```
+  Future<void> setAppTimeLimit({
+    required String packageName,
+    required int dailyLimitMinutes,
+  }) {
+    return ZoAppBlockerPlatform.instance.setAppTimeLimit(
+      packageName: packageName,
+      dailyLimitMinutes: dailyLimitMinutes,
+    );
+  }
+
+  /// Removes a previously configured daily time limit for [packageName].
+  ///
+  /// If the app was automatically blocked because its budget was exhausted,
+  /// calling this method also unblocks it immediately.
+  ///
+  /// Example:
+  /// ```dart
+  /// await ZoAppBlocker.instance.removeAppTimeLimit('com.instagram.android');
+  /// ```
+  Future<void> removeAppTimeLimit(String packageName) {
+    return ZoAppBlockerPlatform.instance.removeAppTimeLimit(packageName);
+  }
+
+  /// Returns all configured daily time limits with their current usage stats.
+  ///
+  /// Each [AppTimeLimit] contains:
+  /// - [AppTimeLimit.packageName] — the app's package name
+  /// - [AppTimeLimit.dailyLimitMinutes] — the configured cap
+  /// - [AppTimeLimit.usedMinutes] — minutes spent today
+  /// - [AppTimeLimit.remainingMinutes] — minutes remaining today
+  /// - [AppTimeLimit.isExhausted] — whether the budget is fully used
+  /// - [AppTimeLimit.usageRatio] — `usedSeconds / dailyLimitSeconds` (0.0–1.0)
+  ///
+  /// Example:
+  /// ```dart
+  /// final limits = await ZoAppBlocker.instance.getAppTimeLimits();
+  /// for (final limit in limits) {
+  ///   print('${limit.packageName}: ${limit.remainingMinutes} min left');
+  /// }
+  /// ```
+  Future<List<AppTimeLimit>> getAppTimeLimits() async {
+    final raw = await ZoAppBlockerPlatform.instance.getAppTimeLimits();
+    return raw.map(AppTimeLimit.fromMap).toList();
+  }
+
+  /// Manually resets today's usage counter for [packageName] to zero.
+  ///
+  /// If the app was automatically blocked due to limit exhaustion, it is
+  /// immediately unblocked and becomes accessible again.
+  ///
+  /// Useful for "give me one more hour" flows or parental override scenarios.
+  ///
+  /// Example:
+  /// ```dart
+  /// await ZoAppBlocker.instance.resetAppUsage('com.instagram.android');
+  /// ```
+  Future<void> resetAppUsage(String packageName) {
+    return ZoAppBlockerPlatform.instance.resetAppUsage(packageName);
   }
 }
