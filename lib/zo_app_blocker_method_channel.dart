@@ -83,8 +83,8 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
   }
 
   @override
-  Future<void> setBlockScreenConfig(Map<String, String> config) async {
-    await methodChannel.invokeMethod('setBlockScreenConfig', config);
+  Future<void> setNotificationConfig(Map<String, String> config) async {
+    await methodChannel.invokeMethod('setNotificationConfig', config);
   }
 
   @override

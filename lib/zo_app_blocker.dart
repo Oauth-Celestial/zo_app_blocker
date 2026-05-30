@@ -139,36 +139,27 @@ class ZoAppBlocker {
         .saveBlockScreenCallbackHandle(handle.toRawHandle());
   }
 
-  /// Customizes the visual appearance of the native block screen and the
-  /// background service notification.
+  /// Customizes the visual appearance of the background service notification.
   ///
-  /// This configures the **native fallback** block screen that is used when
-  /// no custom [initialize] callback has been registered. If a custom callback
-  /// is registered, this config is ignored for the overlay but still used for
-  /// the foreground service notification.
-  ///
-  /// *   [backgroundColor], [titleColor], [descriptionColor]: Colors in Hex format (e.g. '#FF0000').
-  /// *   [title], [description]: The text displayed on the overlay when an app is blocked.
-  /// *   [notificationTitle], [notificationDescription]: The text displayed on the persistent
+  /// *   [notificationBannerTitle], [notificationBannerDescription]: The text displayed on the persistent
   ///     Foreground Service notification (Android only).
-  Future<void> setBlockScreenConfig({
-    String backgroundColor = '#FFFFFF',
-    String title = 'App Blocked',
-    String titleColor = '#000000',
-    String description = 'This app is blocked.',
-    String descriptionColor = '#555555',
-    String notificationTitle = 'App Blocker Active',
-    String notificationDescription = 'Monitoring and blocking restricted apps.',
+  /// *   [notificationIcon]: To set a custom notification icon, place your icon in the
+  ///     `android/app/src/main/res/drawable` folder (e.g., `my_custom_icon.png`) and pass
+  ///     its name without the extension (e.g., 'my_custom_icon'). If not provided, the default
+  ///     application icon is used.
+  Future<void> setNotificationConfig({
+    String notificationBannerTitle = 'App Blocker Active',
+    String notificationBannerDescription = 'Monitoring and blocking restricted apps.',
+    String? notificationIcon,
   }) {
-    return ZoAppBlockerPlatform.instance.setBlockScreenConfig({
-      'backgroundColor': backgroundColor,
-      'title': title,
-      'titleColor': titleColor,
-      'description': description,
-      'descriptionColor': descriptionColor,
-      'notificationTitle': notificationTitle,
-      'notificationDescription': notificationDescription,
-    });
+    final config = {
+      'notificationBannerTitle': notificationBannerTitle,
+      'notificationBannerDescription': notificationBannerDescription,
+    };
+    if (notificationIcon != null) {
+      config['notificationIcon'] = notificationIcon;
+    }
+    return ZoAppBlockerPlatform.instance.setNotificationConfig(config);
   }
 
   /// Retrieves the history of blocked activities.

@@ -105,12 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadBlockedApps();
     
     // Fallback native configuration (used if blockScreenCallback is not set)
-    _zoAppBlockerPlugin.setBlockScreenConfig(
-      backgroundColor: '#000000',
-      title: 'Stop Right There!',
-      titleColor: '#FFFFFF',
-      description: 'You blocked this app. Get back to work!',
-      descriptionColor: '#DDDDDD',
+    _zoAppBlockerPlugin.setNotificationConfig(
+      notificationBannerTitle: 'Stop Right There!',
+      notificationBannerDescription: 'You blocked this app. Get back to work!',
     );
   }
 
