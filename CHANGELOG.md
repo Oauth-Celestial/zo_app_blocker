@@ -12,3 +12,7 @@
 * **Enhancement:** Renamed `setBlockScreenConfig` to `setNotificationConfig`.
 * **Fix:** Resolved Kotlin Gradle Plugin (KGP) build compatibility issues.
 * **Fix:** Fixed a screen flicker issue when launching a blocked application.
+
+## 0.0.4
+
+* Resolved an issue where the `isOverlayShowing` state wasn't updated correctly when dismissing the block screen or requesting an unlock.

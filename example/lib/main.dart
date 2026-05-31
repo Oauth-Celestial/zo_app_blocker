@@ -98,7 +98,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _plugin = ZoAppBlocker.instance;
-  String _permissionStatus = 'Unknown';
+  String _usageStatsStatus = 'Unknown';
+  String _overlayStatus = 'Unknown';
   List<Map<String, dynamic>> _blockedApps = [];
   List<AppTimeLimit> _timeLimits = [];
 
@@ -116,8 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkPermission() async {
-    final status = await _plugin.checkAccessibilityPermission();
-    setState(() => _permissionStatus = status);
+    final usageStatus = await _plugin.checkUsageStatsPermission();
+    final overlayStatus = await _plugin.checkOverlayPermission();
+    setState(() {
+      _usageStatsStatus = usageStatus;
+      _overlayStatus = overlayStatus;
+    });
   }
 
   Future<void> _loadBlockedApps() async {
@@ -145,7 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     }
-    await _plugin.requestAccessibilityPermission();
+    await _plugin.requestUsageStatsPermission();
+    await _plugin.requestOverlayPermission();
     _checkPermission();
   }
 
@@ -299,14 +305,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ListTile(
                   dense: true,
                   leading: Icon(
-                    _permissionStatus == 'granted'
+                    (_usageStatsStatus == 'granted' && _overlayStatus == 'granted')
                         ? Icons.check_circle
                         : Icons.warning_amber_rounded,
-                    color: _permissionStatus == 'granted'
+                    color: (_usageStatsStatus == 'granted' && _overlayStatus == 'granted')
                         ? Colors.green
                         : Colors.orange,
                   ),
-                  title: Text('Accessibility: $_permissionStatus'),
+                  title: Text('Usage Stats: $_usageStatsStatus\nOverlay: $_overlayStatus'),
                 ),
                 const SizedBox(height: 4),
                 FilledButton.icon(

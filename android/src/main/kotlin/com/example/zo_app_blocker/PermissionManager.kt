@@ -12,24 +12,47 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 
 class PermissionManager(private val context: Context) {
-    fun checkAccessibilityPermission(): String {
-        val enabledServices = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-        ) ?: return "denied"
-
-        val component = ComponentName(context, AppBlockerAccessibilityService::class.java)
-        val flat = component.flattenToString()
-
-        val enabled = TextUtils.SimpleStringSplitter(':').apply { setString(enabledServices) }
-            .any { it.equals(flat, ignoreCase = true) }
-
-        return if (enabled) "granted" else "denied"
+    fun checkUsageStatsPermission(): String {
+        val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOpsManager.unsafeCheckOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+        } else {
+            appOpsManager.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+        }
+        return if (mode == android.app.AppOpsManager.MODE_ALLOWED) "granted" else "denied"
     }
 
-    fun requestAccessibilityPermission(activity: Activity) {
-        if (checkAccessibilityPermission() != "granted") {
-            activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    fun requestUsageStatsPermission(activity: Activity) {
+        if (checkUsageStatsPermission() != "granted") {
+            activity.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        }
+    }
+
+    fun checkOverlayPermission(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Settings.canDrawOverlays(context)) "granted" else "denied"
+        } else {
+            "granted"
+        }
+    }
+
+    fun requestOverlayPermission(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(context)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${context.packageName}")
+                )
+                activity.startActivity(intent)
+            }
         }
     }
 

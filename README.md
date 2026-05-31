@@ -5,7 +5,7 @@
 
 A Flutter plugin to block specific applications on Android.
 
-Under the hood, it leverages Android's `AccessibilityService` and `ForegroundService`. This ensures that the app blocking mechanism remains persistent and active, even if the user swipes your Flutter app away from their recent apps list.
+Under the hood, it leverages Android's `UsageStatsManager` and `ForegroundService`. This ensures that the app blocking mechanism remains persistent and active, even if the user swipes your Flutter app away from their recent apps list.
 
 > **Note:** This package currently supports **Android only**.
 
@@ -70,18 +70,23 @@ Future<void> handleNotificationPermission() async {
 }
 ```
 
-### 3. Accessibility Permission
+### 3. Usage Stats and Overlay Permissions
 
-For the plugin to actually detect when a blocked app is opened, the user has to go into their Android settings and enable Accessibility for your app. You can check the status and prompt them to open settings like this:
+For the plugin to actually detect when a blocked app is opened and draw the custom block screen over it, the user has to grant "Usage Access" and "Display over other apps". You can check the status and prompt them to open settings like this:
 
 ```dart
 import 'package:zo_app_blocker/zo_app_blocker.dart';
 
 // ...
 
-final status = await ZoAppBlocker.instance.checkAccessibilityPermission();
-if (status == 'denied') {
-  await ZoAppBlocker.instance.requestAccessibilityPermission(); // Takes them to Android settings
+final usageStatus = await ZoAppBlocker.instance.checkUsageStatsPermission();
+if (usageStatus == 'denied') {
+  await ZoAppBlocker.instance.requestUsageStatsPermission(); // Takes them to Usage Access settings
+}
+
+final overlayStatus = await ZoAppBlocker.instance.checkOverlayPermission();
+if (overlayStatus == 'denied') {
+  await ZoAppBlocker.instance.requestOverlayPermission(); // Takes them to Display over other apps settings
 }
 ```
 

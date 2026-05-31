@@ -4,41 +4,39 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * A foreground service that acts as a reliable safety net for app blocking.
- *
- * While [AppBlockerAccessibilityService] handles instant event-based detection,
- * this service runs an active polling loop every [POLL_INTERVAL_MS] milliseconds
- * to catch any cases that the accessibility service may miss (e.g. delayed events,
- * service restart lag, or edge-case transitions).
- *
- * This mirrors how production screen-time / app-lock apps (e.g. Digital Wellbeing,
- * ActionDash) implement reliable blocking — using both event-driven detection AND
- * a safety-net polling loop.
- *
- * Additionally, this service manages the **Daily Time Limit** feature:
- * - Tracks how long the current foreground timed-app has been open this session.
- * - Updates the notification in real-time with remaining time.
- * - Auto-blocks the app when the daily budget is exhausted.
- * - Resets all daily usage counters at midnight.
+ * A foreground service that acts as the primary engine for app blocking.
+ * It uses UsageStatsManager to poll for foreground apps every second.
  */
 class AppBlockerForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID       = "zo_app_blocker_channel"
         private const val NOTIFICATION_ID  = 101
-        /** How often (ms) to poll the foreground app as a safety net. */
-        private const val POLL_INTERVAL_MS = 1000L   // 1 second — drives the countdown timer
+        private const val POLL_INTERVAL_MS = 1000L
+
+        @Volatile var instance: AppBlockerForegroundService? = null
+            private set
 
         fun start(context: Context) {
             val intent = Intent(context, AppBlockerForegroundService::class.java)
@@ -60,17 +58,20 @@ class AppBlockerForegroundService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var isPolling = false
 
-    // -------------------------------------------------------------------------
+    private lateinit var prefsManager: PreferencesManager
+    private lateinit var windowManager: WindowManager
+    private var overlayView: View? = null
+    internal lateinit var flutterOverlayManager: FlutterOverlayManager
+
+    // Map of packageName -> Expiration Time (Unix Epoch in ms)
+    private val temporaryWhitelist = mutableMapOf<String, Long>()
+
+    @Volatile var lastPackage: String = ""
+        private set
+
     // Time-limit tracking state
-    // -------------------------------------------------------------------------
-
-    /** Package name of the timed app currently in the foreground, or null. */
     private var activeTimedPackage: String? = null
-
-    /** Wall-clock ms when the current foreground session for [activeTimedPackage] started. */
     private var sessionStartMs: Long = 0L
-
-    /** The date string of the last poll — used to detect day rollover. */
     private var lastCheckedDate: String = todayString()
 
     // -------------------------------------------------------------------------
@@ -91,7 +92,13 @@ class AppBlockerForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
+        prefsManager = PreferencesManager(this)
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        flutterOverlayManager = FlutterOverlayManager(this)
+
         createNotificationChannel()
+        flutterOverlayManager.preWarmEngine()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -107,13 +114,15 @@ class AppBlockerForegroundService : Service() {
         }
 
         startPolling()
-        // START_STICKY ensures Android restarts the service immediately if killed.
         return START_STICKY
     }
 
     override fun onDestroy() {
         flushActiveSession()
         stopPolling()
+        removeOverlay()
+        flutterOverlayManager.destroy()
+        instance = null
         super.onDestroy()
     }
 
@@ -134,93 +143,294 @@ class AppBlockerForegroundService : Service() {
         handler.removeCallbacks(pollRunnable)
     }
 
-    /**
-     * Core polling tick. Runs every second.
-     *
-     * 1. Check for midnight rollover → reset daily usage, unblock time-limited apps.
-     * 2. Get the current foreground package from the accessibility service.
-     * 3. If it has a time limit, track the session and update the notification.
-     * 4. If the budget runs out, block the app immediately.
-     * 5. Delegate the normal block-list check to the accessibility service.
-     */
     private fun poll() {
-        val prefsManager = PreferencesManager(this)
-
-        // --- 1. Midnight rollover check ---
         val today = todayString()
         if (today != lastCheckedDate) {
             handleMidnightReset(prefsManager, today)
         }
 
-        val service = AppBlockerAccessibilityService.instance
-
-        // --- 2. Get current foreground package ---
-        val currentPkg = service?.lastPackage ?: run {
-            // Accessibility service not connected; flush any active session.
+        val currentPkg = getForegroundAppFromUsageStats()
+        if (currentPkg.isNullOrEmpty()) {
             flushActiveSessionTo(prefsManager)
             return
         }
 
-        if (currentPkg.isEmpty()) {
-            flushActiveSessionTo(prefsManager)
+        if (currentPkg == "com.android.systemui" || currentPkg == this.packageName || isLauncherPackage(currentPkg)) {
+            lastPackage = currentPkg
             return
         }
 
-        // --- 3. Time-limit tracking ---
+        lastPackage = currentPkg
+
         val timeLimitInfo = prefsManager.getAppTimeLimit(currentPkg)
 
         if (timeLimitInfo != null) {
-            // This app has a daily time limit.
             val remaining = timeLimitInfo["remainingSeconds"] as? Long ?: 0L
 
             if (remaining <= 0L) {
-                // --- 4. Budget already exhausted — ensure it is blocked ---
                 flushActiveSessionTo(prefsManager)
-                ensureAppIsBlocked(currentPkg, prefsManager, service)
+                ensureAppIsBlocked(currentPkg, prefsManager)
                 updateNotificationDefault(prefsManager)
                 return
             }
 
-            // Start a new session if the timed app just became foreground.
             if (activeTimedPackage != currentPkg) {
-                // Flush the previous session if there was one.
                 flushActiveSessionTo(prefsManager)
                 activeTimedPackage = currentPkg
                 sessionStartMs = System.currentTimeMillis()
             }
 
-            // Calculate elapsed seconds in this session (not yet flushed to DB).
             val sessionElapsedSec = (System.currentTimeMillis() - sessionStartMs) / 1000L
             val liveRemaining = (remaining - sessionElapsedSec).coerceAtLeast(0L)
 
             if (liveRemaining <= 0L) {
-                // Budget just ran out mid-session — flush and block.
                 flushActiveSessionTo(prefsManager)
-                ensureAppIsBlocked(currentPkg, prefsManager, service)
+                ensureAppIsBlocked(currentPkg, prefsManager)
                 updateNotificationDefault(prefsManager)
                 return
             }
 
-            // Update notification with live countdown.
             val appName = getAppName(currentPkg)
             updateNotificationCountdown(appName, liveRemaining)
 
         } else {
-            // Current app has no time limit — flush any previous timed session.
             if (activeTimedPackage != null) {
                 flushActiveSessionTo(prefsManager)
                 updateNotificationDefault(prefsManager)
             }
-            // Standard block-list check.
-            service.checkCurrentForegroundApp()
+            checkCurrentForegroundApp()
         }
+    }
+
+    private fun getForegroundAppFromUsageStats(): String? {
+        var foregroundApp: String? = null
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val time = System.currentTimeMillis()
+        val events = usm.queryEvents(time - POLL_INTERVAL_MS * 2, time)
+        if (events != null) {
+            val event = UsageEvents.Event()
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    foregroundApp = event.packageName
+                }
+            }
+        }
+        return foregroundApp ?: lastPackage
+    }
+
+    // -------------------------------------------------------------------------
+    // Blocking Logic
+    // -------------------------------------------------------------------------
+
+    fun checkCurrentForegroundApp() {
+        if (flutterOverlayManager.isOverlayVisible || overlayView != null) {
+            val blockedPkg = flutterOverlayManager.currentBlockedPackage
+                ?: return
+            val stillBlocked = if (prefsManager.isBlockAll()) true
+                               else prefsManager.getBlockedApps().contains(blockedPkg)
+            if (!stillBlocked) {
+                removeOverlay()
+            }
+            return
+        }
+
+        val pkg = lastPackage
+        if (pkg.isEmpty() || pkg == "com.android.systemui" || isLauncherPackage(pkg)) return
+
+        val whitelistExpiration = temporaryWhitelist[pkg]
+        if (whitelistExpiration != null && System.currentTimeMillis() < whitelistExpiration) return
+
+        val shouldBlock = if (prefsManager.isBlockAll()) true
+                          else prefsManager.getBlockedApps().contains(pkg)
+        if (shouldBlock) {
+            showOverlayForPackage(pkg)
+        }
+    }
+
+    fun showOverlayForPackage(packageName: String) {
+        if ((flutterOverlayManager.isOverlayVisible || overlayView != null) &&
+            flutterOverlayManager.currentBlockedPackage == packageName) return
+
+        goHome()
+
+        prefsManager.logBlockEvent(packageName)
+
+        if (prefsManager.hasBlockScreenCallback()) {
+            flutterOverlayManager.showOverlay(packageName, null, null)
+
+            Thread {
+                val pm = packageManager
+                var appName: String? = null
+                var appIcon: ByteArray? = null
+                try {
+                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                    appName = pm.getApplicationLabel(appInfo).toString()
+                    val appResolver = AppResolver(this)
+                    appIcon = appResolver.getAppIconSync(packageName)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                if (appName != null || appIcon != null) {
+                    flutterOverlayManager.updateBlockedAppData(packageName, appName, appIcon)
+                }
+            }.start()
+        } else {
+            showNativeOverlay(packageName)
+        }
+    }
+
+    fun temporarilyUnblock(packageName: String, durationMinutes: Int = 15) {
+        val durationMs = durationMinutes * 60 * 1000L
+        val expiration = System.currentTimeMillis() + durationMs
+        temporaryWhitelist[packageName] = expiration
+        if (lastPackage == packageName) {
+            lastPackage = ""
+        }
+
+        handler.postDelayed({
+            checkCurrentForegroundApp()
+        }, durationMs)
+    }
+
+    private fun goHome() {
+        val startMain = Intent(Intent.ACTION_MAIN)
+        startMain.addCategory(Intent.CATEGORY_HOME)
+        startMain.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(startMain)
+    }
+
+    private fun removeOverlay() {
+        flutterOverlayManager.hideOverlay()
+        handler.post {
+            try {
+                if (overlayView != null && overlayView?.parent != null) {
+                    windowManager.removeView(overlayView)
+                    overlayView = null
+                }
+            } catch (e: Exception) {
+                overlayView = null
+            }
+        }
+    }
+
+    private fun showNativeOverlay(packageName: String) {
+        if (overlayView != null) return
+
+        handler.post {
+            try {
+                if (overlayView == null) {
+                    overlayView = createOverlayView(packageName)
+                    val params = WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                        } else {
+                            WindowManager.LayoutParams.TYPE_PHONE
+                        },
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                        PixelFormat.TRANSLUCENT
+                    )
+                    windowManager.addView(overlayView, params)
+                }
+            } catch (e: Exception) {
+                overlayView = null
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun createOverlayView(packageName: String): View {
+        val config = prefsManager.getBlockScreenConfig()
+
+        val bgColor = parseColorSafe(config["backgroundColor"], "#F44336")
+        val tColor  = parseColorSafe(config["titleColor"],      "#FFFFFF")
+        val dColor  = parseColorSafe(config["descriptionColor"],"#EEEEEE")
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(bgColor)
+            setPadding(80, 80, 80, 80)
+            isClickable = true
+            isFocusable  = true
+        }
+
+        val titleView = TextView(this).apply {
+            text = config["title"] ?: "App Blocked"
+            setTextColor(tColor)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 24)
+        }
+
+        val descView = TextView(this).apply {
+            text = config["description"] ?: "This app is blocked."
+            setTextColor(dColor)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            gravity = Gravity.CENTER
+            setLineSpacing(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4f, resources.displayMetrics), 1.0f)
+            setPadding(0, 0, 0, 64)
+        }
+
+        val btn = android.widget.Button(this).apply {
+            text = "Exit"
+            setTextColor(bgColor)
+            setBackgroundColor(tColor)
+            isAllCaps = false
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(64, 32, 64, 32)
+            elevation = 8f
+            setOnClickListener {
+                goHome()
+                removeOverlay()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        layout.addView(titleView)
+        layout.addView(descView)
+        layout.addView(btn)
+        return layout
+    }
+
+    private fun parseColorSafe(colorStr: String?, defaultColor: String): Int {
+        if (colorStr.isNullOrEmpty()) return Color.parseColor(defaultColor)
+        return try {
+            Color.parseColor(colorStr)
+        } catch (e: Exception) {
+            try {
+                if (colorStr.startsWith("0x", ignoreCase = true)) {
+                    colorStr.substring(2).toLong(16).toInt()
+                } else {
+                    colorStr.toLong().toInt()
+                }
+            } catch (e2: Exception) {
+                Color.parseColor(defaultColor)
+            }
+        }
+    }
+
+    private fun isLauncherPackage(packageName: String): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        val res = packageManager.resolveActivity(intent, 0)
+        return res?.activityInfo?.packageName == packageName
     }
 
     // -------------------------------------------------------------------------
     // Session flushing
     // -------------------------------------------------------------------------
 
-    /** Flush the active timed session without a PreferencesManager instance. */
     private fun flushActiveSession() {
         val pkg = activeTimedPackage ?: return
         val elapsed = (System.currentTimeMillis() - sessionStartMs) / 1000L
@@ -231,7 +441,6 @@ class AppBlockerForegroundService : Service() {
         sessionStartMs = 0L
     }
 
-    /** Flush the active timed session using an existing [prefsManager] instance. */
     private fun flushActiveSessionTo(prefsManager: PreferencesManager) {
         val pkg = activeTimedPackage ?: return
         val elapsed = (System.currentTimeMillis() - sessionStartMs) / 1000L
@@ -242,45 +451,27 @@ class AppBlockerForegroundService : Service() {
         sessionStartMs = 0L
     }
 
-    // -------------------------------------------------------------------------
-    // Auto-block when budget is exhausted
-    // -------------------------------------------------------------------------
-
-    private fun ensureAppIsBlocked(
-        packageName: String,
-        prefsManager: PreferencesManager,
-        service: AppBlockerAccessibilityService?
-    ) {
+    private fun ensureAppIsBlocked(packageName: String, prefsManager: PreferencesManager) {
         val blocked = prefsManager.getBlockedApps()
         if (!blocked.contains(packageName)) {
             val updated = blocked.toMutableSet().apply { add(packageName) }
             prefsManager.saveBlockedApps(updated)
         }
-        service?.checkCurrentForegroundApp()
+        checkCurrentForegroundApp()
     }
-
-    // -------------------------------------------------------------------------
-    // Midnight reset
-    // -------------------------------------------------------------------------
 
     private fun handleMidnightReset(prefsManager: PreferencesManager, today: String) {
         lastCheckedDate = today
-
-        // Flush any active session before resetting (it belongs to the previous day).
         flushActiveSessionTo(prefsManager)
-
-        // Reset all daily usage counters.
         prefsManager.resetAllDailyUsage()
 
-        // Remove time-limit-exhausted packages from the blocked list so they're
-        // accessible again in the new day.
         val timeLimitedPackages = prefsManager.getTimeLimitedPackages()
         if (timeLimitedPackages.isNotEmpty()) {
             val currentBlocked = prefsManager.getBlockedApps().toMutableSet()
             val wasModified = currentBlocked.removeAll(timeLimitedPackages)
             if (wasModified) {
                 prefsManager.saveBlockedApps(currentBlocked)
-                AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                checkCurrentForegroundApp()
             }
         }
     }

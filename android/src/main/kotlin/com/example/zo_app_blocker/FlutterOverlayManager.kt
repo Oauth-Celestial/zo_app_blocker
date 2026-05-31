@@ -35,7 +35,7 @@ class FlutterOverlayManager(private val context: Context) {
 
     /**
      * The single, authoritative flag for whether the overlay is currently on screen.
-     * AppBlockerAccessibilityService and AppBlockerForegroundService must read this
+     * AppBlockerForegroundService must read this
      * instead of maintaining their own copies.
      */
     @Volatile
@@ -96,15 +96,16 @@ class FlutterOverlayManager(private val context: Context) {
                 }
                 "dismissBlockScreen" -> {
                     hideOverlay()
-                    AppBlockerAccessibilityService.instance?.performGlobalAction(
-                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
-                    )
+                    val startMain = Intent(Intent.ACTION_MAIN)
+                    startMain.addCategory(Intent.CATEGORY_HOME)
+                    startMain.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(startMain)
                     result.success(null)
                 }
                 "requestUnlock" -> {
                     val durationMinutes = call.argument<Int>("durationMinutes") ?: 15
                     currentBlockedPackage?.let { pkg ->
-                        AppBlockerAccessibilityService.instance?.temporarilyUnblock(pkg, durationMinutes)
+                        AppBlockerForegroundService.instance?.temporarilyUnblock(pkg, durationMinutes)
                         val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
                         if (launchIntent != null) {
                             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -236,7 +237,11 @@ class FlutterOverlayManager(private val context: Context) {
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or

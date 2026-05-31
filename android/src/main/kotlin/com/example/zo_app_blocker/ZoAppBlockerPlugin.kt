@@ -41,11 +41,18 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         val prefs = prefsManager ?: return result.error("NO_PREFS", "Preferences not initialized", null)
         when (call.method) {
-            "checkAccessibilityPermission" -> {
-                result.success(permissionManager?.checkAccessibilityPermission() ?: "denied")
+            "checkUsageStatsPermission" -> {
+                result.success(permissionManager?.checkUsageStatsPermission() ?: "denied")
             }
-            "requestAccessibilityPermission" -> {
-                activity?.let { permissionManager?.requestAccessibilityPermission(it) }
+            "requestUsageStatsPermission" -> {
+                activity?.let { permissionManager?.requestUsageStatsPermission(it) }
+                result.success(null)
+            }
+            "checkOverlayPermission" -> {
+                result.success(permissionManager?.checkOverlayPermission() ?: "denied")
+            }
+            "requestOverlayPermission" -> {
+                activity?.let { permissionManager?.requestOverlayPermission(it) }
                 result.success(null)
             }
             "checkNotificationPermission" -> {
@@ -85,7 +92,7 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 current.addAll(identifiers)
                 prefs.saveBlockedApps(current)
                 prefs.setBlockAll(false)
-                AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                 context?.let { AppBlockerForegroundService.start(it) }
                 result.success(null)
             }
@@ -94,7 +101,7 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val current = prefs.getBlockedApps().toMutableSet()
                 current.removeAll(identifiers.toSet())
                 prefs.saveBlockedApps(current)
-                AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                 if (!prefs.isBlockAll() && current.isEmpty()) {
                     context?.let { AppBlockerForegroundService.stop(it) }
                 }
@@ -102,14 +109,14 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
             "blockAll" -> {
                 prefs.setBlockAll(true)
-                AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                 context?.let { AppBlockerForegroundService.start(it) }
                 result.success(null)
             }
             "unblockAll" -> {
                 prefs.setBlockAll(false)
                 prefs.saveBlockedApps(emptySet())
-                AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                 context?.let { AppBlockerForegroundService.stop(it) }
                 result.success(null)
             }
@@ -178,7 +185,7 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val blocked = prefs.getBlockedApps().toMutableSet()
                 if (blocked.remove(packageName)) {
                     prefs.saveBlockedApps(blocked)
-                    AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                    AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                 }
 
                 // Stop service if nothing left to track.
@@ -222,7 +229,7 @@ class ZoAppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     if (blocked.remove(packageName)) {
                         prefs.saveBlockedApps(blocked)
                         CoroutineScope(Dispatchers.Main).launch {
-                            AppBlockerAccessibilityService.instance?.checkCurrentForegroundApp()
+                            AppBlockerForegroundService.instance?.checkCurrentForegroundApp()
                         }
                     }
                     CoroutineScope(Dispatchers.Main).launch {

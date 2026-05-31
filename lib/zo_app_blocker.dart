@@ -18,22 +18,34 @@ class ZoAppBlocker {
   /// The singleton instance of [ZoAppBlocker].
   static final ZoAppBlocker instance = ZoAppBlocker._();
 
-  /// Checks the current status of the required accessibility permissions.
+  /// Checks the current status of the Usage Stats permission.
   ///
-  /// On Android, this checks if the Accessibility Service is enabled.
-  /// On iOS, this checks Family Controls authorization.
+  /// On Android, this checks if the app has usage stats permission.
   /// Returns a [String] representing the status (e.g., 'granted', 'denied').
-  Future<String> checkAccessibilityPermission() {
-    return ZoAppBlockerPlatform.instance.checkAccessibilityPermission();
+  Future<String> checkUsageStatsPermission() {
+    return ZoAppBlockerPlatform.instance.checkUsageStatsPermission();
   }
 
-  /// Requests the necessary accessibility permissions to block apps.
+  /// Requests the necessary Usage Stats permissions to block apps.
   ///
-  /// On Android, this opens the device's Accessibility Settings page so the user
-  /// can enable the service.
-  /// On iOS, this prompts the user for Family Controls authorization.
-  Future<void> requestAccessibilityPermission() {
-    return ZoAppBlockerPlatform.instance.requestAccessibilityPermission();
+  /// On Android, this opens the device's Usage Access Settings page.
+  Future<void> requestUsageStatsPermission() {
+    return ZoAppBlockerPlatform.instance.requestUsageStatsPermission();
+  }
+
+  /// Checks the current status of the Display Over Other Apps permission.
+  ///
+  /// On Android, this checks if the app can draw overlays.
+  /// Returns a [String] representing the status (e.g., 'granted', 'denied').
+  Future<String> checkOverlayPermission() {
+    return ZoAppBlockerPlatform.instance.checkOverlayPermission();
+  }
+
+  /// Requests the necessary Overlay permissions to draw block screens.
+  ///
+  /// On Android, this opens the device's Draw Over Other Apps Settings page.
+  Future<void> requestOverlayPermission() {
+    return ZoAppBlockerPlatform.instance.requestOverlayPermission();
   }
 
   /// Checks the current status of the notification permission.

@@ -8,14 +8,25 @@ class MethodChannelZoAppBlocker extends ZoAppBlockerPlatform {
   final methodChannel = const MethodChannel('zo_app_blocker');
 
   @override
-  Future<String> checkAccessibilityPermission() async {
-    final result = await methodChannel.invokeMethod<String>('checkAccessibilityPermission');
+  Future<String> checkUsageStatsPermission() async {
+    final result = await methodChannel.invokeMethod<String>('checkUsageStatsPermission');
     return result ?? 'denied';
   }
 
   @override
-  Future<void> requestAccessibilityPermission() async {
-    await methodChannel.invokeMethod<void>('requestAccessibilityPermission');
+  Future<void> requestUsageStatsPermission() async {
+    await methodChannel.invokeMethod<void>('requestUsageStatsPermission');
+  }
+
+  @override
+  Future<String> checkOverlayPermission() async {
+    final result = await methodChannel.invokeMethod<String>('checkOverlayPermission');
+    return result ?? 'denied';
+  }
+
+  @override
+  Future<void> requestOverlayPermission() async {
+    await methodChannel.invokeMethod<void>('requestOverlayPermission');
   }
 
   @override

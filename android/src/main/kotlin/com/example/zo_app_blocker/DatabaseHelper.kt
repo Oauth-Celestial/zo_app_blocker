@@ -86,7 +86,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         values.put(COLUMN_PREF_KEY, key)
         values.put(COLUMN_PREF_VALUE, value)
         db.replace(TABLE_PREFERENCES, null, values)
-        db.close()
     }
 
     fun getPreference(key: String, defaultValue: String?): String? {
@@ -96,20 +95,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             "$COLUMN_PREF_KEY=?", arrayOf(key), null, null, null, null
         )
         var result: String? = defaultValue
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                result = cursor.getString(0)
-            }
-            cursor.close()
+        if (cursor.moveToFirst()) {
+            result = cursor.getString(0)
         }
-        db.close()
+        cursor.close()
         return result
     }
 
     fun deletePreference(key: String) {
         val db = this.writableDatabase
         db.delete(TABLE_PREFERENCES, "$COLUMN_PREF_KEY=?", arrayOf(key))
-        db.close()
     }
 
     // --- Blocked Apps Methods ---
@@ -128,7 +123,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         } finally {
             db.endTransaction()
         }
-        db.close()
     }
 
     fun getBlockedApps(): Set<String> {
@@ -141,7 +135,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             } while (cursor.moveToNext())
         }
         cursor.close()
-        db.close()
         return apps
     }
 
@@ -153,7 +146,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         values.put(COLUMN_ACTIVITY_PACKAGE, packageName)
         values.put(COLUMN_ACTIVITY_TIMESTAMP, System.currentTimeMillis())
         db.insert(TABLE_BLOCK_ACTIVITY, null, values)
-        db.close()
     }
 
     fun getBlockActivityLog(): List<Map<String, Any>> {
@@ -173,14 +165,12 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             } while (cursor.moveToNext())
         }
         cursor.close()
-        db.close()
         return log
     }
 
     fun clearBlockActivityLog() {
         val db = this.writableDatabase
         db.delete(TABLE_BLOCK_ACTIVITY, null, null)
-        db.close()
     }
 
     // --- App Time Limit Methods ---
@@ -198,7 +188,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(COLUMN_TL_LAST_RESET, todayString())
         }
         db.replace(TABLE_TIME_LIMITS, null, values)
-        db.close()
     }
 
     /**
@@ -243,7 +232,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             } while (cursor.moveToNext())
         }
         cursor.close()
-        db.close()
         return result
     }
 
@@ -262,8 +250,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         )
         if (!cursor.moveToFirst()) {
             cursor.close()
-            db.close()
-            return null
+                return null
         }
 
         val limitSec = cursor.getLong(0)
@@ -280,7 +267,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             db.update(TABLE_TIME_LIMITS, cv, "$COLUMN_TL_PACKAGE=?", arrayOf(packageName))
         }
 
-        db.close()
         val remaining = (limitSec - usedSec).coerceAtLeast(0L)
         return mapOf(
             "packageName" to packageName,
@@ -307,8 +293,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         )
         if (!cursor.moveToFirst()) {
             cursor.close()
-            db.close()
-            return Long.MAX_VALUE // No limit configured
+                return Long.MAX_VALUE // No limit configured
         }
 
         val limitSec = cursor.getLong(0)
@@ -327,7 +312,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(COLUMN_TL_LAST_RESET, today)
         }
         db.update(TABLE_TIME_LIMITS, cv, "$COLUMN_TL_PACKAGE=?", arrayOf(packageName))
-        db.close()
 
         return (limitSec - newUsed).coerceAtLeast(0L)
     }
@@ -342,7 +326,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(COLUMN_TL_LAST_RESET, todayString())
         }
         db.update(TABLE_TIME_LIMITS, cv, "$COLUMN_TL_PACKAGE=?", arrayOf(packageName))
-        db.close()
     }
 
     /**
@@ -356,7 +339,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             put(COLUMN_TL_LAST_RESET, todayString())
         }
         db.update(TABLE_TIME_LIMITS, cv, null, null)
-        db.close()
     }
 
     /**
@@ -365,7 +347,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     fun removeAppTimeLimit(packageName: String) {
         val db = this.writableDatabase
         db.delete(TABLE_TIME_LIMITS, "$COLUMN_TL_PACKAGE=?", arrayOf(packageName))
-        db.close()
     }
 
     /**
@@ -379,7 +360,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             do { packages.add(cursor.getString(0)) } while (cursor.moveToNext())
         }
         cursor.close()
-        db.close()
         return packages
     }
 }
