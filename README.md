@@ -3,6 +3,9 @@
 [![Pub Version](https://img.shields.io/pub/v/zo_app_blocker?color=blue)](https://pub.dev/packages/zo_app_blocker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
+<img width="400" height="690" alt="WhatsAppVideo2026-06-04at1 03 41PM-ezgif com-optimize" src="https://github.com/user-attachments/assets/5fef55b0-f10e-406a-a1e1-4158827e7181" />
+
+
 A Flutter plugin to block specific applications on Android.
 
 Under the hood, it leverages Android's `UsageStatsManager` and `ForegroundService`. This ensures that the app blocking mechanism remains persistent and active, even if the user swipes your Flutter app away from their recent apps list.
