@@ -258,13 +258,14 @@ class FlutterOverlayManager(private val context: Context) {
      * Only acts if the overlay is currently visible for [packageName].
      */
     fun updateBlockedAppData(packageName: String, appName: String?, appIcon: ByteArray?) {
-        if (!isOverlayVisible || currentBlockedPackage != packageName) return
+        if (currentBlockedPackage != packageName) return
         val eventData = mapOf(
             "packageName" to packageName,
             "appName" to appName,
             "appIcon" to appIcon
         )
         handler.post {
+            if (currentBlockedPackage != packageName) return@post
             if (isEngineReady) {
                 sendBlockEvent(eventData)
             } else {

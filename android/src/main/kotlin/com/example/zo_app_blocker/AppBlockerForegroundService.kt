@@ -397,6 +397,25 @@ class AppBlockerForegroundService : Service() {
             )
         }
 
+        val pm = packageManager
+        var appIcon: android.graphics.drawable.Drawable? = null
+        try {
+            appIcon = pm.getApplicationIcon(packageName)
+        } catch (e: Exception) {}
+
+        if (appIcon != null) {
+            val iconSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 72f, resources.displayMetrics).toInt()
+            val marginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, resources.displayMetrics).toInt()
+
+            val iconView = android.widget.ImageView(this).apply {
+                setImageDrawable(appIcon)
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize).apply {
+                    setMargins(0, 0, 0, marginBottom)
+                }
+            }
+            layout.addView(iconView)
+        }
+
         layout.addView(titleView)
         layout.addView(descView)
         layout.addView(btn)
