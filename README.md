@@ -252,6 +252,32 @@ List<Map<String, dynamic>> log = await ZoAppBlocker.instance.getBlockActivityLog
 await ZoAppBlocker.instance.clearBlockActivityLog();
 ```
 
+### 8. Set Daily Time Limit
+
+You can set a daily usage time limit for a specific application. Once the user has spent the specified number of minutes in the app, it will be automatically blocked for the rest of the day.
+
+```dart
+import 'package:zo_app_blocker/zo_app_blocker.dart';
+
+// Set a limit of 50 minutes per day for an app
+await ZoAppBlocker.instance.setAppTimeLimit(
+  packageName: 'com.instagram.android',
+  dailyLimitMinutes: 50,
+);
+
+// Get all configured limits and their current usage
+final limits = await ZoAppBlocker.instance.getAppTimeLimits();
+for (final limit in limits) {
+  print('${limit.packageName}: ${limit.remainingMinutes} min left');
+}
+
+// Reset today's usage counter for an app to zero
+await ZoAppBlocker.instance.resetAppUsage('com.instagram.android');
+
+// Remove the daily time limit for an app
+await ZoAppBlocker.instance.removeAppTimeLimit('com.instagram.android');
+```
+
 ---
 
 Feel free to post a feature requests or report a bug [issues](https://github.com/Oauth-Celestial/zo_app_blocker/issues).

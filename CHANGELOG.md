@@ -14,8 +14,11 @@
 * **Fix:** Fixed a screen flicker issue when launching a blocked application.
 
 ## 0.0.4
-
 * Resolved an issue where the `isOverlayShowing` state wasn't updated correctly when dismissing the block screen or requesting an unlock.
+
+
+## 0.0.5
+
 * Added app scheduling and daily time limit features.
 * Fixed an issue where the app icon was missing in the default block screen.
 * Removed accessibility service and replaced it with `QUERY_ALL_PACKAGES` and overlay permissions to comply with Google Play policies.
