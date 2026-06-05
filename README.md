@@ -129,17 +129,15 @@ void onBlockScreenRequested() {
                 child: const Text('Exit'),
               ),
               const SizedBox(height: 16),
-              // Unlock button with self-documenting Duration parameter
+              // Unlock button for the current session
               OutlinedButton(
                 onPressed: () async {
-                  final granted = await context.onRequestUnlock?.call(
-                    duration: const Duration(minutes: 15),
-                  ) ?? false;
+                  final granted = await context.onRequestTemporarySessionUnlock?.call() ?? false;
                   if (granted) {
-                    // Temporarily unlocked!
+                    // Temporarily unlocked for this session!
                   }
                 },
-                child: const Text('Unlock for 15 mins (50 coins)'),
+                child: const Text('Unlock for this session (50 coins)'),
               ),
             ],
           ),

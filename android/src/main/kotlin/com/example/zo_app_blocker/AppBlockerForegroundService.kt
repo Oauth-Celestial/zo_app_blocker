@@ -63,8 +63,8 @@ class AppBlockerForegroundService : Service() {
     private var overlayView: View? = null
     internal lateinit var flutterOverlayManager: FlutterOverlayManager
 
-    // Map of packageName -> Expiration Time (Unix Epoch in ms)
-    private val temporaryWhitelist = mutableMapOf<String, Long>()
+    // Package name of the currently unblocked session app
+    private var currentUnblockedSessionApp: String? = null
 
     @Volatile var lastPackage: String = ""
         private set
@@ -155,6 +155,15 @@ class AppBlockerForegroundService : Service() {
             return
         }
 
+        // If the foreground app changes, end the session unblock.
+        // We ignore our own package and systemui (notification shade) to avoid false positives.
+        if (currentUnblockedSessionApp != null &&
+            currentPkg != currentUnblockedSessionApp &&
+            currentPkg != this.packageName &&
+            currentPkg != "com.android.systemui") {
+            currentUnblockedSessionApp = null
+        }
+
         if (currentPkg == "com.android.systemui" || currentPkg == this.packageName || isLauncherPackage(currentPkg)) {
             lastPackage = currentPkg
             return
@@ -238,8 +247,7 @@ class AppBlockerForegroundService : Service() {
         val pkg = lastPackage
         if (pkg.isEmpty() || pkg == "com.android.systemui" || isLauncherPackage(pkg)) return
 
-        val whitelistExpiration = temporaryWhitelist[pkg]
-        if (whitelistExpiration != null && System.currentTimeMillis() < whitelistExpiration) return
+        if (pkg == currentUnblockedSessionApp) return
 
         val shouldBlock = if (prefsManager.isBlockAll()) true
                           else prefsManager.getBlockedApps().contains(pkg)
@@ -280,17 +288,13 @@ class AppBlockerForegroundService : Service() {
         }
     }
 
-    fun temporarilyUnblock(packageName: String, durationMinutes: Int = 15) {
-        val durationMs = durationMinutes * 60 * 1000L
-        val expiration = System.currentTimeMillis() + durationMs
-        temporaryWhitelist[packageName] = expiration
+    fun temporarySessionUnlock(packageName: String) {
+        // We use a strict foreground session instead
+        currentUnblockedSessionApp = packageName
         if (lastPackage == packageName) {
             lastPackage = ""
         }
-
-        handler.postDelayed({
-            checkCurrentForegroundApp()
-        }, durationMs)
+        checkCurrentForegroundApp()
     }
 
     private fun goHome() {

@@ -102,10 +102,9 @@ class FlutterOverlayManager(private val context: Context) {
                     context.startActivity(startMain)
                     result.success(null)
                 }
-                "requestUnlock" -> {
-                    val durationMinutes = call.argument<Int>("durationMinutes") ?: 15
+                "temporarySessionUnlock" -> {
                     currentBlockedPackage?.let { pkg ->
-                        AppBlockerForegroundService.instance?.temporarilyUnblock(pkg, durationMinutes)
+                        AppBlockerForegroundService.instance?.temporarySessionUnlock(pkg)
                         val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
                         if (launchIntent != null) {
                             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -242,8 +241,7 @@ class FlutterOverlayManager(private val context: Context) {
             } else {
                 WindowManager.LayoutParams.TYPE_PHONE
             },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT

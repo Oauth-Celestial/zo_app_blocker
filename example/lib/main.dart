@@ -42,16 +42,13 @@ void onBlockScreenRequested() {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () async {
-                  final granted = await context.onRequestUnlock?.call(
-                        duration: const Duration(minutes: 15),
-                      ) ??
-                      false;
+                  final granted = await context.onRequestTemporarySessionUnlock?.call() ?? false;
                   if (!granted) {
                     // Could show a snackbar or dialog if unlock failed
                   }
                 },
                 icon: const Icon(Icons.lock_open),
-                label: const Text('Unlock temporarily (Cost: 50 coins)'),
+                label: const Text('Unlock for this session (Cost: 50 coins)'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white70),

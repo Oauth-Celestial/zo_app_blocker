@@ -34,7 +34,7 @@ typedef BlockScreenWidgetBuilder = Widget Function(BlockScreenContext context);
 /// This is the single argument to a [BlockScreenWidgetBuilder]. It contains:
 /// - Identification of the blocked app ([packageName], [appName], [appIcon])
 /// - An [onDismiss] callback to close the overlay and go home
-/// - An optional [onRequestUnlock] callback for pay-to-unlock flows
+/// - An optional [onRequestTemporarySessionUnlock] callback for pay-to-unlock flows
 class BlockScreenContext {
   /// Creates a new [BlockScreenContext].
   const BlockScreenContext({
@@ -42,7 +42,7 @@ class BlockScreenContext {
     this.appName,
     this.appIcon,
     required this.onDismiss,
-    this.onRequestUnlock,
+    this.onRequestTemporarySessionUnlock,
   });
 
   /// The package name of the blocked app (e.g., 'com.instagram.android').
@@ -63,30 +63,14 @@ class BlockScreenContext {
   /// Call this from your block screen's "Exit" or "Go Back" button.
   final VoidCallback onDismiss;
 
-  /// Requests temporary access to the blocked app.
+  /// Requests temporary session access to the blocked app.
   ///
-  /// This is intended for "pay-to-unlock" flows (e.g., spend virtual currency
-  /// to use a blocked app for a limited time).
+  /// This is intended for "pay-to-unlock" flows. The app will remain
+  /// unblocked for the current session (until the user navigates away or goes home).
   ///
   /// The returned [Future] completes with `true` if the unlock was granted
   /// by the native side, or `false` if it was denied.
   ///
   /// This field is `null` if no unlock handler has been configured.
-  ///
-  /// Example (Candy Crush-style flow):
-  /// ```dart
-  /// onPressed: () async {
-  ///   if (userCoins >= 50) {
-  ///     userCoins -= 50;
-  ///     // Unlock for 30 minutes
-  ///     final granted = await context.onRequestUnlock?.call(
-  ///       duration: const Duration(minutes: 30),
-  ///     ) ?? false;
-  ///     if (granted) {
-  ///       // The blocked app is temporarily accessible!
-  ///     }
-  ///   }
-  /// }
-  /// ```
-  final Future<bool> Function({required Duration duration})? onRequestUnlock;
+  final Future<bool> Function()? onRequestTemporarySessionUnlock;
 }
