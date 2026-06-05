@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'zo_app_blocker_platform_interface.dart';
 import 'src/app_time_limit.dart';
 
@@ -18,11 +20,20 @@ class ZoAppBlocker {
   /// The singleton instance of [ZoAppBlocker].
   static final ZoAppBlocker instance = ZoAppBlocker._();
 
+  bool get _isNotSupported {
+    if (kIsWeb || !Platform.isAndroid) {
+      print('zo_app_blocker is not supported on this platform');
+      return true;
+    }
+    return false;
+  }
+
   /// Checks the current status of the Usage Stats permission.
   ///
   /// On Android, this checks if the app has usage stats permission.
   /// Returns a [String] representing the status (e.g., 'granted', 'denied').
   Future<String> checkUsageStatsPermission() {
+    if (_isNotSupported) return Future.value('denied');
     return ZoAppBlockerPlatform.instance.checkUsageStatsPermission();
   }
 
@@ -30,6 +41,7 @@ class ZoAppBlocker {
   ///
   /// On Android, this opens the device's Usage Access Settings page.
   Future<void> requestUsageStatsPermission() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.requestUsageStatsPermission();
   }
 
@@ -38,6 +50,7 @@ class ZoAppBlocker {
   /// On Android, this checks if the app can draw overlays.
   /// Returns a [String] representing the status (e.g., 'granted', 'denied').
   Future<String> checkOverlayPermission() {
+    if (_isNotSupported) return Future.value('denied');
     return ZoAppBlockerPlatform.instance.checkOverlayPermission();
   }
 
@@ -45,6 +58,7 @@ class ZoAppBlocker {
   ///
   /// On Android, this opens the device's Draw Over Other Apps Settings page.
   Future<void> requestOverlayPermission() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.requestOverlayPermission();
   }
 
@@ -52,6 +66,7 @@ class ZoAppBlocker {
   ///
   /// Returns a [String] representing the status (e.g., 'granted', 'denied').
   Future<String> checkNotificationPermission() {
+    if (_isNotSupported) return Future.value('denied');
     return ZoAppBlockerPlatform.instance.checkNotificationPermission();
   }
 
@@ -59,6 +74,7 @@ class ZoAppBlocker {
   ///
   /// Required on Android 13+ to show the foreground service notification.
   Future<void> requestNotificationPermission() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.requestNotificationPermission();
   }
 
@@ -68,6 +84,7 @@ class ZoAppBlocker {
   /// On iOS, this opens the native `FamilyActivityPicker` and returns the
   /// opaque tokens for the selected apps/categories.
   Future<List<Map<String, dynamic>>> getApps() {
+    if (_isNotSupported) return Future.value([]);
     return ZoAppBlockerPlatform.instance.getApps();
   }
 
@@ -76,6 +93,7 @@ class ZoAppBlocker {
   /// Returns a [Uint8List] containing the PNG bytes of the icon, or null
   /// if the icon cannot be found or is not supported (e.g. on iOS).
   Future<Uint8List?> getAppIcon(String packageName) async {
+    if (_isNotSupported) return null;
     final bytes = await ZoAppBlockerPlatform.instance.getAppIcon(packageName);
     if (bytes == null) return null;
     return Uint8List.fromList(bytes);
@@ -85,6 +103,7 @@ class ZoAppBlocker {
   ///
   /// Returns a list of maps containing information about the blocked apps.
   Future<List<Map<String, dynamic>>> getBlockedApps() {
+    if (_isNotSupported) return Future.value([]);
     return ZoAppBlockerPlatform.instance.getBlockedApps();
   }
 
@@ -94,21 +113,25 @@ class ZoAppBlocker {
   /// On iOS, these are the base64-encoded strings of the opaque tokens returned
   /// by the FamilyActivityPicker.
   Future<void> blockApps(List<String> identifiers) {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.blockApps(identifiers);
   }
 
   /// Unblocks the apps identified by the provided [identifiers].
   Future<void> unblockApps(List<String> identifiers) {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.unblockApps(identifiers);
   }
 
   /// Blocks all applications or app categories.
   Future<void> blockAll() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.blockAll();
   }
 
   /// Unblocks all applications or app categories.
   Future<void> unblockAll() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.unblockAll();
   }
 
@@ -139,6 +162,7 @@ class ZoAppBlocker {
   /// If [initialize] is never called, the package falls back to the native
   /// block screen controlled by [setBlockScreenConfig].
   Future<void> initialize({required Function blockScreenCallback}) async {
+    if (_isNotSupported) return;
     final handle = PluginUtilities.getCallbackHandle(
       blockScreenCallback as void Function(),
     );
@@ -166,6 +190,7 @@ class ZoAppBlocker {
         'Monitoring and blocking restricted apps.',
     String? notificationIcon,
   }) {
+    if (_isNotSupported) return Future.value();
     final config = {
       'notificationBannerTitle': notificationBannerTitle,
       'notificationBannerDescription': notificationBannerDescription,
@@ -180,11 +205,13 @@ class ZoAppBlocker {
   ///
   /// Returns a list of maps containing 'packageName' (String) and 'timestamp' (int) in milliseconds.
   Future<List<Map<String, dynamic>>> getBlockActivityLog() {
+    if (_isNotSupported) return Future.value([]);
     return ZoAppBlockerPlatform.instance.getBlockActivityLog();
   }
 
   /// Clears the history of blocked activities.
   Future<void> clearBlockActivityLog() {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.clearBlockActivityLog();
   }
 
@@ -215,6 +242,7 @@ class ZoAppBlocker {
     required String packageName,
     required int dailyLimitMinutes,
   }) {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.setAppTimeLimit(
       packageName: packageName,
       dailyLimitMinutes: dailyLimitMinutes,
@@ -231,6 +259,7 @@ class ZoAppBlocker {
   /// await ZoAppBlocker.instance.removeAppTimeLimit('com.instagram.android');
   /// ```
   Future<void> removeAppTimeLimit(String packageName) {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.removeAppTimeLimit(packageName);
   }
 
@@ -252,6 +281,7 @@ class ZoAppBlocker {
   /// }
   /// ```
   Future<List<AppTimeLimit>> getAppTimeLimits() async {
+    if (_isNotSupported) return Future.value([]);
     final raw = await ZoAppBlockerPlatform.instance.getAppTimeLimits();
     return raw.map(AppTimeLimit.fromMap).toList();
   }
@@ -268,6 +298,7 @@ class ZoAppBlocker {
   /// await ZoAppBlocker.instance.resetAppUsage('com.instagram.android');
   /// ```
   Future<void> resetAppUsage(String packageName) {
+    if (_isNotSupported) return Future.value();
     return ZoAppBlockerPlatform.instance.resetAppUsage(packageName);
   }
 }

@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "zo_app_blocker",
-      "version": "0.0.4",
+      "version": "0.0.6",
       "dependencies": [
         "flutter",
         "plugin_platform_interface"
