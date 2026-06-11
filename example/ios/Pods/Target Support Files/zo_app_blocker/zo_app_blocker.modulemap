@@ -1,0 +1,6 @@
+framework module zo_app_blocker {
+  umbrella header "zo_app_blocker-umbrella.h"
+
+  export *
+  module * { export * }
+}
